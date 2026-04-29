@@ -1,0 +1,11 @@
+# Nix
+result
+result-*
+.direnv/
+
+# Local tools
+.codex/
+
+# Editors
+*.swp
+*.swo
