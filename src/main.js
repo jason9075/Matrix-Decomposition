@@ -38,8 +38,8 @@ const MODES = {
     label: { en: "RQ", zhTW: "RQ" },
     short: { en: "camera intrinsics times rotation", zhTW: "相機內參乘上旋轉" },
     note: {
-      en: "Camera disassembly: the upper triangular factor models intrinsics, while the orthogonal factor carries orientation.",
-      zhTW: "相機拆解：上三角因子對應內參，正交因子對應姿態方向。",
+      en: "Camera disassembly: the left upper-triangular factor is read like the intrinsic matrix K, while the right orthogonal factor is the rotation matrix. Keep that separate from the decomposition symbols R and Q.",
+      zhTW: "相機拆解：左邊的上三角因子通常讀成內參矩陣 K，右邊的正交因子就是旋轉矩陣。這和分解符號本身的 R、Q 要分開看，不要混在一起。",
     },
     matrixNote: {
       en: "The preset looks like a realistic calibration-style matrix: pixel-scale intrinsics multiplied by a mild camera rotation. Randomize keeps focal lengths and principal point in plausible ranges.",
@@ -201,12 +201,14 @@ const MODES = {
   },
 };
 
-const modeKeys = Object.keys(MODES);
+const modeKeys = ["svd", "qr", "rq", "cholesky", "eigen", "polar"];
+const modalModeOrder = ["svd", "qr", "rq", "cholesky", "eigen", "polar"];
 
 const state = {
   mode: "svd",
   matrix: cloneMatrix(MODES.svd.preset),
   language: getStoredLanguage(),
+  modalMode: "svd",
   factors: [],
   lastError: "",
 };
@@ -229,6 +231,7 @@ const elements = {
   closeMathButton: document.getElementById("close-math"),
   languageToggle: document.getElementById("language-toggle"),
   mathModal: document.getElementById("math-modal"),
+  mathModeSelect: document.getElementById("math-mode-select"),
   mathContent: document.getElementById("math-content"),
   fillPresetButton: document.getElementById("fill-preset"),
   makeDegenerateButton: document.getElementById("make-degenerate"),
@@ -236,46 +239,130 @@ const elements = {
   randomizeButton: document.getElementById("randomize"),
 };
 
-const modalCopy = {
-  en: () => {
-    const mode = getModeText(state.mode, "label");
-    return `
-      <p>This playground treats a 3x3 matrix as a linear map acting on vectors in $\\mathbb{R}^3$, but the page now focuses on factor interpretation rather than 3D rendering.</p>
-      <p>In the active <strong>${mode}</strong> mode, the interface emphasizes a factorization whose pieces have geometric or engineering meaning. Orthogonal matrices rotate or reflect, diagonal matrices scale along axes, and triangular matrices encode ordered shear or calibration structure.</p>
-      <p>The matrix columns still tell you how the standard basis is transformed:
-      $$A = \\begin{bmatrix} a_{11} & a_{12} & a_{13} \\\\ a_{21} & a_{22} & a_{23} \\\\ a_{31} & a_{32} & a_{33} \\end{bmatrix}, \\quad
-      A e_i = \\text{column}_i(A).$$</p>
-      <p>For example, singular-value decomposition writes
-      $$A = U \\Sigma V^T,$$
-      where $U$ and $V$ are orthogonal and $\\Sigma$ stores non-negative stretches. In polar decomposition,
-      $$A = Q S,$$
-      where $Q$ is the nearest orthogonal transform and $S$ is symmetric positive definite.</p>
-      <pre><code class="language-js">const { U, S, VT } = svdDecomposition(A);
-const rank = singularValues.filter((v) => v > 1e-5).length;
-const nullSpaceLivesInV = VT[2];</code></pre>
-      <p>Rank is estimated by counting singular values above a small tolerance, so the "Make Degenerate" control visibly crushes one dimension when the smallest singular value falls toward zero.</p>
-      <p>The active ${mode} demo is one slice of a larger toolbox. The main point is to read each factor as structure: which part is geometry, which part is scale, and which part is there for numerical stability or modeling convenience.</p>
-    `;
+const modalLessons = {
+  en: {
+    svd: {
+      intro: "SVD is the most general decomposition in this page. It works for any 3x3 matrix, so it is the safest place to explain how a matrix rotates one basis, stretches along principal axes, and then rotates again.",
+      mathTitle: "Mathematical Form",
+      mathBody: "We write $$A = U\\Sigma V^{\\top},$$ where $U$ and $V$ are orthogonal and $$\\Sigma = \\operatorname{diag}(\\sigma_1, \\sigma_2, \\sigma_3), \\quad \\sigma_i \\ge 0.$$ In this implementation, the singular values come from the symmetric matrix $$A^{\\top}A = V\\Sigma^2V^{\\top}.$$ Once $V$ and $\\Sigma$ are known, the left factor is recovered by $$U = A V \\Sigma^{-1}.$$",
+      derivationTitle: "Derivation Used Here",
+      derivationBody: "The code does not call a library SVD. It first builds $A^{\\top}A$, diagonalizes that symmetric matrix with a Jacobi eigen iteration, sorts eigenvalues by magnitude, takes square roots to get singular values, and then reconstructs $U$. That is why this page can also explain why the smallest singular value controls rank deficiency and null-space directions.",
+      jsTitle: "JavaScript Path",
+      jsBody: "This view calls `svdDecomposition(matrix)`. Internally it uses `transpose(matrix)`, `multiplyMatrices(a, b)`, `jacobiEigenDecomposition(ata)`, and then computes `singularValues`. The displayed `Rank` comes from `estimateRank(matrix)` with a small threshold.",
+      jsSnippet: `const { U, S, VT, singularValues } = svdDecomposition(matrix);\nconst rank = estimateRank(matrix);`,
+    },
+    rq: {
+      intro: "RQ is the camera-centric decomposition here. It is useful when the matrix already behaves like a calibration block, and you want to separate intrinsic parameters from orientation instead of treating everything as one opaque 3x3 map.",
+      mathTitle: "Mathematical Form",
+      mathBody: "We write $$A = RQ,$$ where $R$ is upper triangular and $Q$ is orthogonal. In camera language, the left factor is usually interpreted as the intrinsic matrix $K$, while the right factor is the rotation matrix. That naming collision is exactly why this page keeps the decomposition symbols $R, Q$ separate from camera-model symbols $K, R$. The key structural goal is not just factorization, but enforcing the upper-triangular shape on the left factor.",
+      derivationTitle: "Derivation Used Here",
+      derivationBody: "This page treats RQ as something derived from QR rather than as the first algorithm to learn. The matrix is flipped in rows and columns, transposed, sent through QR, and then flipped back to recover an upper-triangular left factor and an orthogonal right factor. In other words, the trick is to transform the problem into one QR already knows how to solve, then undo that transformation. A final sign cleanup keeps the diagonal of the upper-triangular factor positive.",
+      jsTitle: "JavaScript Path",
+      jsBody: "This view calls `rqDecomposition(matrix)`. Internally it uses `reverseRows(matrix)`, `reverseCols(matrix)`, `transpose(matrix)`, and `qrDecomposition(flipped)`, then performs diagonal sign cleanup.",
+      jsSnippet: `const { R, Q } = rqDecomposition(matrix);\nconst reconstructed = multiplyMatrices(R, Q);`,
+    },
+    qr: {
+      intro: "QR is the workhorse for orthogonalization. It is less universal than SVD, but much cheaper, and it is often exactly what you want when the real task is a stable basis change or a least-squares solve.",
+      mathTitle: "Mathematical Form",
+      mathBody: "We write $$A = QR,$$ where $Q$ is orthogonal and $R$ is upper triangular. Geometrically, $Q$ builds an orthonormal frame from the columns of $A$, and $R$ records how the original columns are expressed inside that frame.",
+      derivationTitle: "Derivation Used Here",
+      derivationBody: "Classically, QR can be built in several ways: Gram-Schmidt orthogonalization, Givens rotations, and Householder transformations are the standard families. Givens and Householder are especially good at zeroing entries while preserving orthogonality, which is why they show up so often in numerical libraries. This page uses a lighter Gram-Schmidt style orthogonalization instead: it normalizes the first column, subtracts projections to orthogonalize the second and third columns, and falls back to a small repair path when the last direction becomes numerically weak. After that, it computes $$R = Q^{\\top}A.$$",
+      jsTitle: "JavaScript Path",
+      jsBody: "This view calls `qrDecomposition(matrix)`. The function uses `column(matrix, i)`, `dot(a, b)`, `scaleVector(v, s)`, `subtractVectors(a, b)`, `normalize(v)`, and finishes with `multiplyMatrices(transpose(Q), matrix)`.",
+      jsSnippet: `const { Q, R } = qrDecomposition(matrix);\nconst coefficients = multiplyMatrices(transpose(Q), matrix);`,
+    },
+    cholesky: {
+      intro: "Cholesky is the specialized fast path. It only applies when the matrix is symmetric positive definite, but in that regime it is one of the cleanest and cheapest decompositions you can use.",
+      mathTitle: "Mathematical Form",
+      mathBody: "We write $$A = LL^{\\top},$$ where $L$ is lower triangular. Every diagonal entry of $L$ must stay real and positive, so this decomposition only exists when the leading principal minors behave correctly, which is why symmetric positive definite matrices are the natural domain.",
+      derivationTitle: "Derivation Used Here",
+      derivationBody: "The code fills $L$ entry by entry. For diagonal terms it uses $$L_{ii} = \\sqrt{A_{ii} - \\sum_{k < i} L_{ik}^2},$$ and for off-diagonal terms it uses $$L_{ij} = \\frac{A_{ij} - \\sum_{k < j} L_{ik}L_{jk}}{L_{jj}} \\quad (i > j).$$ If a diagonal term becomes non-positive, the function throws because the matrix is not positive definite.",
+      jsTitle: "JavaScript Path",
+      jsBody: "This view calls `choleskyDecomposition(matrix)`. The function runs nested loops over rows and columns, accumulates partial sums, checks the positive-definite condition, and returns a lower-triangular `L` used to display both `L` and `L^T`.",
+      jsSnippet: `const L = choleskyDecomposition(matrix);\nconst LT = transpose(L);`,
+    },
+    eigen: {
+      intro: "Eigen decomposition is the cleanest way to talk about principal directions when the matrix is symmetric. In this page it plays the role of a PCA-style lens: which directions matter, and how strong is each one?",
+      mathTitle: "Mathematical Form",
+      mathBody: "For the symmetric case shown here, we write $$A = Q\\Lambda Q^{\\top},$$ where the columns of $Q$ are orthonormal eigenvectors and $$\\Lambda = \\operatorname{diag}(\\lambda_1, \\lambda_2, \\lambda_3).$$ Because the matrix is symmetric, the eigenbasis can be chosen orthonormal, which makes the decomposition much cleaner than the generic $V\\Lambda V^{-1}$ case.",
+      derivationTitle: "Derivation Used Here",
+      derivationBody: "The implementation uses a Jacobi eigen iteration. At each step it finds the largest off-diagonal entry, builds a plane rotation $J$, and updates the matrix by $$A \\leftarrow J^{\\top}AJ.$$ Repeating this drives the matrix toward diagonal form, while the accumulated product of rotations becomes the eigenvector matrix.",
+      jsTitle: "JavaScript Path",
+      jsBody: "This view calls `jacobiEigenDecomposition(matrix)`. Inside that function, the code iteratively builds `J`, updates `A` and `V`, then sorts eigenpairs by magnitude before returning `Q`, `D`, and `eigenvalues`.",
+      jsSnippet: `const { Q, D, eigenvalues } = jacobiEigenDecomposition(matrix);\nconst reconstructed = multiplyMatrices(Q, multiplyMatrices(D, transpose(Q)));`,
+    },
+    polar: {
+      intro: "Polar decomposition is the repair lens. It is useful when a matrix should behave almost like a rotation, but accumulated numerical drift or deformation has mixed a clean rigid part with an unwanted stretch.",
+      mathTitle: "Mathematical Form",
+      mathBody: "We write $$A = QS,$$ where $Q$ is orthogonal and $S$ is symmetric positive semidefinite. A standard formula is $$S = \\sqrt{A^{\\top}A}, \\quad Q = AS^{-1}.$$ This is why the decomposition separates a nearest-rotation style factor from the remaining symmetric stretch.",
+      derivationTitle: "Derivation Used Here",
+      derivationBody: "The code reuses SVD instead of implementing a matrix square root directly. If $$A = U\\Sigma V^{\\top},$$ then the polar factors are $$Q = UV^{\\top}, \\quad S = V\\Sigma V^{\\top}.$$ That route is numerically simple and makes the connection between polar and SVD explicit.",
+      jsTitle: "JavaScript Path",
+      jsBody: "This view calls `polarDecomposition(matrix)`. Internally it first runs `svdDecomposition(matrix)`, then assembles `Q = U V^T` and `S = V \\Sigma V^T` using `multiplyMatrices(...)` and `transpose(...)`.",
+      jsSnippet: `const { Q, S } = polarDecomposition(matrix);\nconst repaired = multiplyMatrices(Q, S);`,
+    },
   },
-  zhTW: () => {
-    const mode = getModeText(state.mode, "label");
-    return `
-    <p>這個 playground 把一個 3x3 矩陣視為作用在 $\\mathbb{R}^3$ 向量上的線性映射，但頁面現在聚焦在分解的解讀，而不是 3D 視覺化。</p>
-    <p>目前模式會強調某種具有幾何或工程意義的分解。正交矩陣代表旋轉或鏡射，對角矩陣代表沿座標軸縮放，三角矩陣則常用來表達有順序的剪切或相機內參。</p>
-    <p>矩陣的三個 column 仍然對應標準基底被變換後的結果：
-    $$A = \\begin{bmatrix} a_{11} & a_{12} & a_{13} \\\\ a_{21} & a_{22} & a_{23} \\\\ a_{31} & a_{32} & a_{33} \\end{bmatrix}, \\quad
-    A e_i = \\text{column}_i(A)。$$</p>
-    <p>以 SVD 為例，
-    $$A = U \\Sigma V^T,$$
-    其中 $U, V$ 是正交矩陣，$\\Sigma$ 則記錄主軸方向上的伸縮量。Polar 分解則寫成
-    $$A = Q S,$$
-    其中 $Q$ 是最接近原矩陣的正交變換，$S$ 是對稱正定矩陣。</p>
-    <pre><code class="language-js">const { U, S, VT } = svdDecomposition(A);
-const rank = singularValues.filter((v) => v > 1e-5).length;
-const nullSpaceLivesInV = VT[2];</code></pre>
-    <p>Rank 的估計方式是計算奇異值中大於容差的個數，所以按下「Make Degenerate」之後，你會看到最小奇異值趨近 0，物體也會明顯被壓扁。</p>
-    <p>目前的 ${mode} 模式只是整個工具箱中的一個切面。重點不是背表格，而是讀懂每個因子各自代表什麼結構：哪一部分是幾何方向、哪一部分是縮放，哪一部分是為了數值穩定或工程建模而存在。</p>
-  `;
+  zhTW: {
+    svd: {
+      intro: "SVD 是這個頁面裡最通用的分解。因為任何 3x3 矩陣都能拆，所以它最適合拿來說明一個矩陣其實是在做：先旋轉基底、沿主軸縮放、再旋轉一次。",
+      mathTitle: "數學形式",
+      mathBody: "我們把矩陣寫成 $$A = U\\Sigma V^{\\top},$$ 其中 $U$ 和 $V$ 都是正交矩陣，而 $$\\Sigma = \\operatorname{diag}(\\sigma_1, \\sigma_2, \\sigma_3), \\quad \\sigma_i \\ge 0.$$ 這份實作先從對稱矩陣 $$A^{\\top}A = V\\Sigma^2V^{\\top}$$ 出發，先求出右奇異向量與奇異值，再用 $$U = A V \\Sigma^{-1}$$ 回推出左奇異向量。",
+      derivationTitle: "這頁實際用的推導",
+      derivationBody: "這裡沒有直接呼叫現成的 SVD library，而是先建立 $A^{\\top}A$，再用 Jacobi eigen iteration 把這個對稱矩陣對角化，依特徵值大小排序之後開根號得到奇異值，最後重建 $U$。所以這個頁面也能順著同一套流程解釋：為什麼最小奇異值會控制 rank 缺失，以及 null space 的方向。",
+      jsTitle: "對應的 JavaScript",
+      jsBody: "這個視圖會呼叫 `svdDecomposition(matrix)`。函式內部會用到 `transpose(matrix)`、`multiplyMatrices(a, b)`、`jacobiEigenDecomposition(ata)`，最後整理出 `singularValues`。畫面上的 `Rank` 則是透過 `estimateRank(matrix)` 搭配一個小閾值算出來的。",
+      jsSnippet: `const { U, S, VT, singularValues } = svdDecomposition(matrix);\nconst rank = estimateRank(matrix);`,
+    },
+    rq: {
+      intro: "RQ 是這個頁面裡最偏相機語境的分解。當一個矩陣本來就比較像 calibration block 時，你真正想拆開看的通常不是它本身，而是裡面的內參和姿態。",
+      mathTitle: "數學形式",
+      mathBody: "我們把矩陣寫成 $$A = RQ,$$ 其中 $R$ 是上三角矩陣，$Q$ 是正交矩陣。若放到相機拆解的語境裡，左邊這個分解因子通常會被解讀成內參矩陣 $K$，右邊就是旋轉矩陣。也就是說，RQ 分解裡的 $R$ 不要直接和相機姿態裡的旋轉 $R$ 混為一談；這也是這個頁面刻意把分解符號 $R, Q$ 和相機符號 $K, R$ 分開講的原因。這裡的目標不只是做分解，而是要求左邊那個因子真的保留上三角結構。",
+      derivationTitle: "這頁實際用的推導",
+      derivationBody: "這個頁面把 RQ 視為從 QR 推出來的結果，而不是主要演算法本體。做法是先把矩陣做列翻轉、行翻轉和轉置，轉成一個 QR 比較容易處理的形式；跑完 QR 之後，再把結果全部翻回來，就能得到左邊是上三角、右邊是正交的 RQ 分解。也就是說，這裡的重點不是另外再學一套 RQ 消去，而是理解它如何從 QR 轉換過來。最後還會修正對角線符號，讓上三角因子的對角項維持為正。",
+      jsTitle: "對應的 JavaScript",
+      jsBody: "這個視圖會呼叫 `rqDecomposition(matrix)`。內部會用到 `reverseRows(matrix)`、`reverseCols(matrix)`、`transpose(matrix)` 和 `qrDecomposition(flipped)`，最後再做一次對角線符號清理。",
+      jsSnippet: `const { R, Q } = rqDecomposition(matrix);\nconst reconstructed = multiplyMatrices(R, Q);`,
+    },
+    qr: {
+      intro: "QR 很像數值線代裡的基本工具箱。它沒有 SVD 那麼萬能，但在正交化、least squares 或穩定地整理基底這些事情上，通常已經很好用，而且成本也更低。",
+      mathTitle: "數學形式",
+      mathBody: "我們把矩陣寫成 $$A = QR,$$ 其中 $Q$ 是正交矩陣，$R$ 是上三角矩陣。幾何上可以把它理解成：$Q$ 先建立一組正交基底，而 $R$ 負責記錄原本那些 column 在這組基底下的座標。",
+      derivationTitle: "這頁實際用的推導",
+      derivationBody: "在經典數值線代裡，QR 常見的做法其實有三大類：Gram-Schmidt Process、Givens Rotation、Householder Transformation。後兩者很適合一邊保留正交性、一邊把某些元素消成 0，所以在數值 library 裡很常見；Gram-Schmidt 則是概念最直觀的一條路。這份頁面實作走的是比較輕量的 Gram-Schmidt 風格正交化：先把第一個 column 正規化，再逐步扣掉投影來處理第二、第三個 column；如果最後一個方向數值上太弱，還會進到一個小的修補流程。完成之後再用 $$R = Q^{\\top}A$$ 回推出上三角因子。",
+      jsTitle: "對應的 JavaScript",
+      jsBody: "這個視圖會呼叫 `qrDecomposition(matrix)`。函式裡會用到 `column(matrix, i)`、`dot(a, b)`、`scaleVector(v, s)`、`subtractVectors(a, b)`、`normalize(v)`，最後再算 `multiplyMatrices(transpose(Q), matrix)`。",
+      jsSnippet: `const { Q, R } = qrDecomposition(matrix);\nconst coefficients = multiplyMatrices(transpose(Q), matrix);`,
+    },
+    cholesky: {
+      intro: "Cholesky 是這個頁面裡最專門、也最快的一種。它只適用在對稱正定矩陣，但只要矩陣真的落在這個範圍內，幾乎沒有理由不用它。",
+      mathTitle: "數學形式",
+      mathBody: "我們把矩陣寫成 $$A = LL^{\\top},$$ 其中 $L$ 是下三角矩陣。因為 $L$ 的對角項必須保持實數且為正，所以這個分解只會在矩陣的主子式條件正確時成立，也就是對稱正定矩陣剛好最自然。",
+      derivationTitle: "這頁實際用的推導",
+      derivationBody: "程式會逐格把 $L$ 填出來。對角項使用 $$L_{ii} = \\sqrt{A_{ii} - \\sum_{k < i} L_{ik}^2},$$ 非對角項使用 $$L_{ij} = \\frac{A_{ij} - \\sum_{k < j} L_{ik}L_{jk}}{L_{jj}} \\quad (i > j).$$ 只要某一個對角項變成非正，函式就會直接丟錯，表示這個矩陣不是 positive definite。",
+      jsTitle: "對應的 JavaScript",
+      jsBody: "這個視圖會呼叫 `choleskyDecomposition(matrix)`。函式內部是巢狀迴圈逐步累積 partial sums、檢查 positive-definite 條件，最後回傳下三角 `L`，畫面再另外用 `transpose(L)` 顯示 `L^T`。",
+      jsSnippet: `const L = choleskyDecomposition(matrix);\nconst LT = transpose(L);`,
+    },
+    eigen: {
+      intro: "Eigen 分解最適合拿來談主方向。當矩陣是對稱的時候，這件事會變得特別乾淨，所以它很適合對應 PCA、structure tensor 或各種 principal-axis 問題。",
+      mathTitle: "數學形式",
+      mathBody: "在這個頁面的對稱情況下，我們把矩陣寫成 $$A = Q\\Lambda Q^{\\top},$$ 其中 $Q$ 的 column 是一組正交特徵向量，而 $$\\Lambda = \\operatorname{diag}(\\lambda_1, \\lambda_2, \\lambda_3).$$ 因為矩陣對稱，所以特徵基底可以選成正交，這會比一般的 $V\\Lambda V^{-1}$ 好讀很多。",
+      derivationTitle: "這頁實際用的推導",
+      derivationBody: "這份實作使用 Jacobi eigen iteration。每一步都先找出最大的非對角項，建立一個平面旋轉 $J$，再用 $$A \\leftarrow J^{\\top}AJ$$ 把這個非對角成分慢慢消掉。重複幾輪之後，矩陣會越來越接近對角型，而累積起來的旋轉乘積就是特徵向量矩陣。",
+      jsTitle: "對應的 JavaScript",
+      jsBody: "這個視圖會呼叫 `jacobiEigenDecomposition(matrix)`。內部會反覆建立 `J`、更新 `A` 和 `V`，最後依特徵值大小排序，回傳 `Q`、`D` 和 `eigenvalues`。",
+      jsSnippet: `const { Q, D, eigenvalues } = jacobiEigenDecomposition(matrix);\nconst reconstructed = multiplyMatrices(Q, multiplyMatrices(D, transpose(Q)));`,
+    },
+    polar: {
+      intro: "Polar 分解很適合處理『它本來應該像旋轉，但現在被數值誤差或形變污染了』這類問題。它的重點不是把矩陣拆開而已，而是把乾淨的旋轉和殘留伸縮分開。",
+      mathTitle: "數學形式",
+      mathBody: "我們把矩陣寫成 $$A = QS,$$ 其中 $Q$ 是正交矩陣，$S$ 是對稱半正定矩陣。常見公式是 $$S = \\sqrt{A^{\\top}A}, \\quad Q = AS^{-1}.$$ 所以這個分解本質上是在抽出最接近 rotation 的那一部分，再把剩下的 stretch 留在對稱因子裡。",
+      derivationTitle: "這頁實際用的推導",
+      derivationBody: "這個頁面沒有另外實作 matrix square root，而是直接重用 SVD。若 $$A = U\\Sigma V^{\\top},$$ 那 polar 因子就可以寫成 $$Q = UV^{\\top}, \\quad S = V\\Sigma V^{\\top}.$$ 這樣一方面數值上比較單純，一方面也能直接看出 polar 和 SVD 的關係。",
+      jsTitle: "對應的 JavaScript",
+      jsBody: "這個視圖會呼叫 `polarDecomposition(matrix)`。函式內部會先跑 `svdDecomposition(matrix)`，再透過 `multiplyMatrices(...)` 和 `transpose(...)` 組出 `Q = U V^T` 與 `S = V \\Sigma V^T`。",
+      jsSnippet: `const { Q, S } = polarDecomposition(matrix);\nconst repaired = multiplyMatrices(Q, S);`,
+    },
   },
 };
 
@@ -300,6 +387,7 @@ const I18N = {
     modeSummaryTitle: "Mode Summary",
     pipelineStatusTitle: "Application Context",
     mathTitle: "Math Behind the Scene",
+    mathModeLabel: "Topic",
     close: "Close",
     mathButtonAria: "Explain the math",
   },
@@ -323,6 +411,7 @@ const I18N = {
     modeSummaryTitle: "模式摘要",
     pipelineStatusTitle: "應用場域",
     mathTitle: "畫面背後的數學",
+    mathModeLabel: "主題",
     close: "關閉",
     mathButtonAria: "說明數學原理",
   },
@@ -873,6 +962,13 @@ function buildOrthogonalityHover(matrix) {
   `;
 }
 
+function renderModalModeOptions() {
+  elements.mathModeSelect.innerHTML = modalModeOrder.map((key) => `
+    <option value="${key}">${getModeText(key, "label")}</option>
+  `).join("");
+  elements.mathModeSelect.value = state.modalMode;
+}
+
 function shouldInspectOrthogonality(title, kind) {
   return kind === "orthogonal" || (state.mode === "polar" && title === "A");
 }
@@ -1036,7 +1132,18 @@ function updateHeroBreakdown() {
 }
 
 function renderModalContent() {
-  elements.mathContent.innerHTML = modalCopy[state.language]();
+  renderModalModeOptions();
+  const lesson = modalLessons[state.language][state.modalMode];
+  elements.mathContent.innerHTML = `
+    <p>${lesson.intro}</p>
+    <h3>${lesson.mathTitle}</h3>
+    <p>${lesson.mathBody}</p>
+    <h3>${lesson.derivationTitle}</h3>
+    <p>${lesson.derivationBody}</p>
+    <h3>${lesson.jsTitle}</h3>
+    <p>${lesson.jsBody}</p>
+    <pre><code class="language-js">${lesson.jsSnippet}</code></pre>
+  `;
   if (window.renderMathInElement) {
     window.renderMathInElement(elements.mathContent, {
       delimiters: [
@@ -1081,6 +1188,7 @@ function applyStaticTranslations() {
   document.getElementById("mode-summary-title").textContent = t("modeSummaryTitle");
   document.getElementById("pipeline-status-title").textContent = t("pipelineStatusTitle");
   document.getElementById("math-title").textContent = t("mathTitle");
+  document.getElementById("math-mode-label").textContent = t("mathModeLabel");
   document.getElementById("close-math").textContent = t("close");
   elements.openMathButton.setAttribute("aria-label", t("mathButtonAria"));
   elements.languageToggle.textContent = state.language === "en" ? "中" : "Eng";
@@ -1202,6 +1310,7 @@ function bindUI() {
   elements.randomizeButton.addEventListener("click", randomizeCurrentMatrix);
 
   elements.openMathButton.addEventListener("click", () => {
+    state.modalMode = state.mode;
     renderModalContent();
     elements.mathModal.hidden = false;
   });
@@ -1217,6 +1326,14 @@ function bindUI() {
     renderModeButtons();
     updateModeCopy();
     updateAll();
+    renderModalContent();
+  });
+
+  elements.mathModeSelect.addEventListener("change", (event) => {
+    if (!(event.target instanceof HTMLSelectElement)) {
+      return;
+    }
+    state.modalMode = event.target.value;
     renderModalContent();
   });
 

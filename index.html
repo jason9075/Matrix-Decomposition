@@ -585,6 +585,27 @@
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .modal-mode-picker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--fog-2);
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .modal-mode-picker select {
+      min-width: 170px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(136, 192, 208, 0.18);
+      background: rgba(9, 17, 29, 0.82);
+      color: var(--fog-0);
     }
 
     .modal-body {
@@ -600,44 +621,6 @@
       color: var(--blue);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-    }
-
-    .modal-body table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      overflow: hidden;
-      display: block;
-    }
-
-    .modal-body thead,
-    .modal-body tbody {
-      display: table;
-      width: 100%;
-      table-layout: fixed;
-    }
-
-    .modal-body th,
-    .modal-body td {
-      padding: 10px 12px;
-      vertical-align: top;
-      text-align: left;
-      border-bottom: 1px solid rgba(216, 222, 233, 0.08);
-    }
-
-    .modal-body th {
-      color: var(--fog-0);
-      background: rgba(136, 192, 208, 0.08);
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .modal-body tr:last-child td {
-      border-bottom: none;
     }
 
     .modal-body pre[class*="language-"] {
@@ -948,6 +931,10 @@
       <div class="modal-header">
         <h2 id="math-title">Math Behind the Scene</h2>
         <div class="modal-actions">
+          <label class="modal-mode-picker" for="math-mode-select">
+            <span id="math-mode-label">Topic</span>
+            <select id="math-mode-select" aria-label="Select decomposition topic"></select>
+          </label>
           <button id="close-math" class="ghost-button" type="button" aria-label="Close">Close</button>
         </div>
       </div>
