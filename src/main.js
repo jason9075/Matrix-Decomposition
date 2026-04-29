@@ -18,7 +18,7 @@ const MODES = {
         matrixType: "Any matrix",
         use: "DLT, fundamental matrix estimation, ICP / point-cloud alignment",
         intuition: "Most universal. Excellent for null-space extraction and numerically very stable, but also the most expensive.",
-        summary: "SVD 幾乎什麼矩陣都能用，所以常被當成最後的穩定解法。做 DLT、基本矩陣估計或 ICP 對齊時，很多關鍵步驟其實都在找最小奇異值對應的方向，也就是你真正想要的 null space；代價是它通常也是這幾種分解裡最貴的一個。",
+        summary: "SVD works on almost anything, so it is often the stable fallback when you do not want surprises. In DLT, fundamental-matrix estimation, and ICP alignment, the real target is often the direction attached to the smallest singular value, which is exactly why SVD is so useful; the tradeoff is that it is usually the most expensive option here.",
       },
       zhTW: {
         form: "UΣV^T",
@@ -51,7 +51,7 @@ const MODES = {
         matrixType: "Square matrices",
         use: "Camera calibration, splitting projection matrices into K and R",
         intuition: "Vision-specific. Upper-triangular factor on the left behaves like intrinsics, orthogonal factor on the right behaves like rotation.",
-        summary: "RQ 幾乎就是為相機模型而生的。當你手上有投影矩陣或 3x3 相機子矩陣，最想知道的通常不是它本身，而是裡面的內參 K 和旋轉 R；這時 RQ 能直接把這兩層意思拆開，讀起來比一般分解更貼近視覺工程。",
+        summary: "RQ is almost tailor-made for camera models. When you have a projection matrix or a 3x3 camera block, what you usually care about is not the raw matrix itself but the intrinsics K and the rotation R hidden inside it; RQ separates those two meanings directly, so it reads much closer to how vision engineers think.",
       },
       zhTW: {
         form: "RQ",
@@ -84,7 +84,7 @@ const MODES = {
         matrixType: "Any matrix",
         use: "Orthogonalization, least-squares solvers",
         intuition: "Standard workhorse. Stable version of Gram-Schmidt, with Q on the left.",
-        summary: "QR 很像數值線代裡的日常工具。要做正交化、解 least squares，或把一組彼此糾纏的向量整理成穩定基底時，通常先想到它；它不像 SVD 那麼重，但在實務上已經足夠穩，而且速度更好。",
+        summary: "QR is the everyday tool of numerical linear algebra. If you need orthogonalization, a least-squares solve, or just a cleaner basis for a messy set of vectors, QR is usually the first thing to reach for; it is lighter than SVD, but in practice already stable enough for a lot of real work.",
       },
       zhTW: {
         form: "QR",
@@ -117,7 +117,7 @@ const MODES = {
         matrixType: "Symmetric positive definite",
         use: "Bundle adjustment, Kalman filtering",
         intuition: "Speed king. Much faster than generic LU in the right setting. If you see covariance matrices or A^TA, think Cholesky first.",
-        summary: "只要矩陣是對稱正定，Cholesky 幾乎就是第一選擇。Bundle adjustment、Kalman filter 和各種 covariance 更新裡常常會遇到這種矩陣；這時不需要繞去做更通用但更重的分解，直接用 Cholesky 通常最快，也最符合工程直覺。",
+        summary: "As soon as the matrix is symmetric positive definite, Cholesky is usually the right answer. That happens all the time in bundle adjustment, Kalman filtering, and covariance updates, so there is rarely a reason to pay for a more general factorization when this one is faster and matches the structure exactly.",
       },
       zhTW: {
         form: "LL^T",
@@ -150,7 +150,7 @@ const MODES = {
         matrixType: "Square matrices",
         use: "PCA, structure tensor analysis",
         intuition: "Finds principal directions. For symmetric matrices, eigen-decomposition lines up closely with SVD.",
-        summary: "如果你想知道資料或算子最主要往哪個方向變化，Eigen 通常最直接。PCA、structure tensor、慣性主軸這類問題，本質上都在問特徵向量和特徵值；對稱矩陣時它尤其好讀，因為每個方向的意義會非常乾淨。",
+        summary: "If the real question is which directions matter most, eigen-decomposition is usually the cleanest lens. PCA, structure tensors, and principal-axis problems are all basically asking for eigenvectors and eigenvalues; when the matrix is symmetric, the result becomes especially easy to read because each direction has a clean meaning.",
       },
       zhTW: {
         form: "VΛV^-1",
@@ -183,7 +183,7 @@ const MODES = {
         matrixType: "Square matrices",
         use: "Rotation repair, deformation analysis",
         intuition: "Separates a transform into pure rotation and pure stretch. Useful when numerical drift corrupts a rotation matrix.",
-        summary: "Polar 很適合處理『這個矩陣本來應該像旋轉，但被數值誤差弄髒了』的情況。做姿態更新、模擬形變或累積很多小步旋轉之後，常需要把旋轉成分和殘留伸縮重新拆開；這時它比直接看原矩陣直觀得多。",
+        summary: "Polar decomposition is great for the situation where a matrix should behave like a rotation, but numerical drift has made it slightly dirty. After pose updates, deformation steps, or many small rotation accumulations, it gives you a very direct way to pull the clean rotation apart from the leftover stretch.",
       },
       zhTW: {
         form: "QS",
