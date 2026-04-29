@@ -9,8 +9,8 @@ const MODES = {
       zhTW: "投影與形變：球體會沿著奇異向量方向被拉成橢球。",
     },
     matrixNote: {
-      en: "The preset is full-rank with clearly separated singular values, which makes the stretch directions easy to read. Randomize samples another well-conditioned anisotropic transform.",
-      zhTW: "這個 preset 是 full-rank 而且奇異值差異明顯，方便觀察主軸伸縮。隨機按鈕也會產生另一個條件良好的非等向變換。",
+      en: "This preset starts as a clean full-rank matrix with clearly separated singular values. Use `Make Degenerate` when you want to force one direction to collapse and watch the smallest singular value move toward zero; `Randomize` gives you another well-conditioned anisotropic transform.",
+      zhTW: "這個 preset 一開始是乾淨的 full-rank 矩陣，而且奇異值分離得很明顯，方便你先看主軸伸縮。想看退化情況時再按 `製造退化`，它會故意把其中一個方向壓扁，讓最小奇異值往 0 靠近；`隨機矩陣` 則會換成另一個條件良好的非等向變換。",
     },
     application: {
       en: {
@@ -174,8 +174,8 @@ const MODES = {
       zhTW: "姿態修復：從接近旋轉的矩陣中抽出最接近的正交旋轉，分離殘餘伸縮。",
     },
     matrixNote: {
-      en: "The preset starts near a real pose matrix: mostly rotation, with a small symmetric stretch. Randomize keeps samples close to rigid motion so the repair intuition stays clear.",
-      zhTW: "這個 preset 一開始就接近真實姿態矩陣：大部分是旋轉，只帶一點對稱伸縮。隨機按鈕也會讓樣本保持接近剛體運動，方便觀察修復直覺。",
+      en: "This preset begins close to a real pose matrix: mostly rotation, with only a small symmetric stretch. Use `Perturb Rotation` to deliberately spoil orthogonality and then see how polar decomposition pulls the clean rotation back out; `Randomize` keeps samples near rigid motion so the repair intuition stays clear.",
+      zhTW: "這個 preset 一開始就接近真實姿態矩陣：大部分是旋轉，只帶一點對稱伸縮。想看 Polar 怎麼修復旋轉時，先按 `擾動旋轉`，它會故意把正交性弄髒，接著你就能觀察分解怎麼把乾淨旋轉重新抽出來；`隨機矩陣` 也會維持接近剛體運動的範圍。",
     },
     application: {
       en: {
@@ -829,10 +829,51 @@ function buildMatrixMarkup(matrix) {
   `;
 }
 
-function buildHeroMatrixCard(title, tag, matrix, kind = "symmetric") {
+function orthogonalityDiagnostics(matrix) {
+  const gram = multiplyMatrices(transpose(matrix), matrix);
+  const identity = identityMatrix();
+  let maxAbsDiff = 0;
+
+  for (let row = 0; row < 3; row += 1) {
+    for (let col = 0; col < 3; col += 1) {
+      maxAbsDiff = Math.max(maxAbsDiff, Math.abs(gram[row][col] - identity[row][col]));
+    }
+  }
+
+  const det = determinant(matrix);
+  const looksOrthogonal = maxAbsDiff < 1e-3;
+  const status = state.language === "zhTW"
+    ? (looksOrthogonal ? "看起來接近正交" : "偏離正交")
+    : (looksOrthogonal ? "Looks orthogonal" : "Drifts from orthogonal");
+
+  return {
+    status,
+    error: formatNumber(maxAbsDiff),
+    det: formatNumber(det),
+  };
+}
+
+function buildOrthogonalityHover(matrix) {
+  const diagnostics = orthogonalityDiagnostics(matrix);
+  const errorLabel = state.language === "zhTW" ? "max |Q^TQ - I|" : "max |Q^TQ - I|";
+  const detLabel = "det";
+
   return `
-    <article class="hero-matrix-card">
-      <div class="factor-tag ${kind}">${tag}</div>
+    <div class="orthogonality-hover">
+      <div class="orthogonality-status">${diagnostics.status}</div>
+      <div class="orthogonality-metric">${errorLabel} = ${diagnostics.error}</div>
+      <div class="orthogonality-metric">${detLabel} = ${diagnostics.det}</div>
+    </div>
+  `;
+}
+
+function buildHeroMatrixCard(title, tag, matrix, kind = "symmetric") {
+  const orthogonalityHover = kind === "orthogonal" ? buildOrthogonalityHover(matrix) : "";
+  const tagLabel = kind === "orthogonal" ? `${tag} 🔍` : tag;
+  return `
+    <article class="hero-matrix-card ${kind === "orthogonal" ? "has-orthogonality-hover" : ""}">
+      <div class="factor-tag ${kind}">${tagLabel}</div>
+      ${orthogonalityHover}
       <h3>${title}</h3>
       ${buildMatrixMarkup(matrix)}
     </article>

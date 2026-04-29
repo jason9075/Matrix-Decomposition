@@ -66,6 +66,20 @@
       gap: 18px;
     }
 
+    .github-ribbon {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 10;
+      line-height: 0;
+    }
+
+    .github-ribbon img {
+      display: block;
+      width: 149px;
+      height: 149px;
+    }
+
     .hero {
       position: relative;
       overflow: hidden;
@@ -167,6 +181,7 @@
     }
 
     .hero-matrix-card {
+      position: relative;
       border: 1px solid rgba(216, 222, 233, 0.08);
       border-radius: 18px;
       padding: 12px;
@@ -176,6 +191,57 @@
     .hero-matrix-card h3 {
       margin: 0 0 10px;
       font-size: 0.98rem;
+    }
+
+    .orthogonality-hover {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 42px;
+      z-index: 2;
+      padding: 10px 12px;
+      border: 1px solid rgba(136, 192, 208, 0.25);
+      border-radius: 14px;
+      background: rgba(9, 17, 29, 0.96);
+      box-shadow: 0 18px 32px rgba(3, 8, 18, 0.32);
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .hero-matrix-card .factor-tag.orthogonal {
+      position: relative;
+      z-index: 3;
+    }
+
+    .hero-matrix-card .factor-tag.orthogonal:hover + .orthogonality-hover,
+    .hero-matrix-card .factor-tag.orthogonal:focus-visible + .orthogonality-hover {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .orthogonality-status {
+      color: var(--blue);
+      font-size: 0.86rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .orthogonality-metric,
+    .orthogonality-label {
+      color: var(--fog-1);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.63rem;
+      line-height: 1.45;
+    }
+
+    .orthogonality-label {
+      margin-top: 6px;
+      color: var(--fog-2);
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     .stage-breakdown {
@@ -766,6 +832,22 @@
 </head>
 <body>
   <main class="shell">
+  <a
+    href="https://github.com/jason9075/Matrix-Decomposition"
+    class="github-ribbon"
+    target="_blank"
+    rel="noreferrer"
+    aria-label="View Matrix-Decomposition on GitHub"
+  >
+    <img
+      loading="lazy"
+      decoding="async"
+      width="149"
+      height="149"
+      src="https://github.blog/wp-content/uploads/2008/12/forkme_right_gray_6d6d6d.png"
+      alt="Fork me on GitHub"
+    />
+  </a>
     <section class="hero panel">
       <div class="hero-top">
         <div>
