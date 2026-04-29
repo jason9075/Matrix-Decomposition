@@ -330,7 +330,7 @@
 
     .button-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 10px;
     }
 
@@ -340,23 +340,20 @@
       padding: 11px 14px;
     }
 
+    .button-row button {
+      flex: 1 1 0;
+      text-align: center;
+    }
+
     .solid-button {
       background: linear-gradient(135deg, rgba(208, 135, 112, 0.9), rgba(191, 97, 106, 0.9));
       border-color: transparent;
     }
 
-    .dice-row {
-      margin-top: 12px;
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .dice-button {
-      width: 46px;
-      height: 46px;
-      padding: 0;
-      border-radius: 14px;
-      font-size: 1.15rem;
+    .button-stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
     }
 
     .matrix-note,
@@ -367,9 +364,14 @@
       font-size: 0.92rem;
     }
 
+    .is-hidden {
+      display: none !important;
+    }
+
     .stage {
       display: grid;
       grid-template-rows: auto auto auto;
+      align-content: start;
       overflow: hidden;
     }
 
@@ -579,10 +581,8 @@
     }
 
     .floating-knowledge {
-      position: fixed;
-      right: 24px;
-      bottom: 24px;
-      z-index: 40;
+      position: relative;
+      z-index: 1;
       width: 52px;
       height: 52px;
       border-radius: 16px;
@@ -658,6 +658,60 @@
         0 0 0 6px rgba(136, 192, 208, 0.06);
     }
 
+    .floating-stack {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 40;
+      display: grid;
+      gap: 10px;
+      justify-items: end;
+    }
+
+    .floating-language {
+      position: relative;
+      z-index: 1;
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      border-radius: 16px;
+      border: 1px solid rgba(136, 192, 208, 0.24);
+      background:
+        radial-gradient(circle at 30% 30%, rgba(143, 188, 187, 0.18), transparent 34%),
+        linear-gradient(145deg, rgba(59, 76, 109, 0.96), rgba(23, 33, 51, 0.96));
+      box-shadow:
+        0 12px 28px rgba(3, 8, 18, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      color: var(--fog-0);
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      transition:
+        transform 220ms ease,
+        box-shadow 220ms ease,
+        border-color 220ms ease,
+        filter 220ms ease;
+    }
+
+    .floating-language::before {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .floating-language:hover,
+    .floating-language:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(136, 192, 208, 0.38);
+      box-shadow:
+        0 16px 32px rgba(3, 8, 18, 0.4),
+        0 0 0 6px rgba(136, 192, 208, 0.06);
+      filter: saturate(1.04);
+      outline: none;
+    }
+
     @media (max-width: 1100px) {
       .workspace {
         grid-template-columns: 1fr;
@@ -699,6 +753,14 @@
         gap: 6px;
       }
 
+      .button-row {
+        flex-wrap: wrap;
+      }
+
+      .button-row button {
+        flex: 1 1 calc(50% - 5px);
+      }
+
     }
   </style>
 </head>
@@ -709,7 +771,6 @@
         <div>
           <div class="hero-actions">
             <div id="hero-eyebrow" class="eyebrow">gfx-lab / 3x3 factorization workbench</div>
-            <button id="language-toggle" class="ghost-button" type="button">Eng/中</button>
           </div>
           <h1 id="hero-title">Matrix Decomposition Playground</h1>
           <p id="hero-copy">
@@ -750,16 +811,15 @@
           </div>
           <div id="matrix-grid" class="matrix-grid"></div>
           <p id="matrix-note" class="matrix-note"></p>
-          <div class="button-row">
-            <button id="fill-preset" class="matrix-action" type="button">Load Preset</button>
-            <button id="decompose" class="solid-button" type="button">Decompose</button>
-          </div>
-          <div class="button-row">
-            <button id="make-degenerate" class="ghost-button" type="button">Make Degenerate</button>
-            <button id="perturb-rotation" class="ghost-button" type="button">Perturb Rotation</button>
-          </div>
-          <div class="dice-row">
-            <button id="randomize" class="ghost-button dice-button" type="button" aria-label="Randomize matrix">🎲</button>
+          <div class="button-stack">
+            <div class="button-row">
+              <button id="fill-preset" class="ghost-button" type="button">Reset</button>
+              <button id="randomize" class="ghost-button" type="button" aria-label="Randomize matrix">Randomize</button>
+            </div>
+            <div class="button-row">
+              <button id="make-degenerate" class="ghost-button" type="button">Make Degenerate</button>
+              <button id="perturb-rotation" class="ghost-button" type="button">Perturb Rotation</button>
+            </div>
           </div>
         </section>
 
@@ -812,7 +872,10 @@
     </section>
   </main>
 
-  <button id="open-math" class="floating-knowledge" type="button" aria-haspopup="dialog" aria-controls="math-modal" aria-label="Explain the math">💡</button>
+  <div class="floating-stack">
+    <button id="language-toggle" class="floating-language" type="button">Eng/中</button>
+    <button id="open-math" class="floating-knowledge" type="button" aria-haspopup="dialog" aria-controls="math-modal" aria-label="Explain the math">💡</button>
+  </div>
 
   <div id="math-modal" role="dialog" aria-modal="true" aria-labelledby="math-title" hidden>
     <div class="modal-panel">

@@ -137,7 +137,6 @@ const elements = {
   mathModal: document.getElementById("math-modal"),
   mathContent: document.getElementById("math-content"),
   fillPresetButton: document.getElementById("fill-preset"),
-  decomposeButton: document.getElementById("decompose"),
   makeDegenerateButton: document.getElementById("make-degenerate"),
   perturbRotationButton: document.getElementById("perturb-rotation"),
   randomizeButton: document.getElementById("randomize"),
@@ -314,7 +313,7 @@ const I18N = {
     htmlLang: "en",
     heroEyebrow: "gfx-lab / 3x3 factorization workbench",
     heroTitle: "Matrix Decomposition Playground",
-    heroCopy: "Switch decomposition modes, edit the matrix by cell or slider, trigger factorization, and compare each split through its matrix form, use case, and engineering intuition.",
+    heroCopy: "Switch decomposition modes, edit the matrix directly, and compare each split through its matrix form, use case, and engineering intuition.",
     metricModeLabel: "Active Mode",
     metricDetLabel: "Determinant",
     metricRankLabel: "Estimated Rank",
@@ -324,8 +323,7 @@ const I18N = {
     modesSubtitle: "Preset-driven 3x3 examples",
     matrixControllerTitle: "Matrix Controller",
     matrixControllerSubtitle: "Type or slide values",
-    loadPreset: "Load Preset",
-    decompose: "Decompose",
+    loadPreset: "Reset",
     makeDegenerate: "Make Degenerate",
     perturbRotation: "Perturb Rotation",
     randomize: "Randomize",
@@ -341,7 +339,7 @@ const I18N = {
     htmlLang: "zh-Hant",
     heroEyebrow: "gfx-lab / 3x3 分解工作台",
     heroTitle: "矩陣分解互動實驗室",
-    heroCopy: "切換分解模式、用輸入框或 slider 編輯矩陣、觸發分解，並從矩陣形式、使用場合與工程直覺比較每一種拆解。",
+    heroCopy: "切換分解模式、直接編輯矩陣，並從矩陣形式、使用場合與工程直覺比較每一種拆解。",
     metricModeLabel: "目前模式",
     metricDetLabel: "行列式",
     metricRankLabel: "估計秩",
@@ -351,8 +349,7 @@ const I18N = {
     modesSubtitle: "以 preset 驅動的 3x3 範例",
     matrixControllerTitle: "矩陣控制區",
     matrixControllerSubtitle: "可直接輸入或滑動調整",
-    loadPreset: "載入範例",
-    decompose: "進行分解",
+    loadPreset: "重置",
     makeDegenerate: "製造退化",
     perturbRotation: "擾動旋轉",
     randomize: "隨機矩陣",
@@ -379,11 +376,11 @@ function getModeText(modeKey, field) {
 }
 
 function getEquationText() {
-  if (state.mode === "svd") return "A = UΣV^T";
+  if (state.mode === "svd") return "A = U\\Sigma V^{\\top}";
   if (state.mode === "rq") return "A = RQ";
   if (state.mode === "qr") return "A = QR";
-  if (state.mode === "cholesky") return "A = LL^T";
-  if (state.mode === "eigen") return "A = QΛQ^T";
+  if (state.mode === "cholesky") return "A = LL^{\\top}";
+  if (state.mode === "eigen") return "A = Q\\Lambda Q^{\\top}";
   return "A = QS";
 }
 
@@ -842,6 +839,11 @@ function updateModeCopy() {
   elements.matrixNote.textContent = mode.matrixNote[state.language];
 }
 
+function updateModeActions() {
+  elements.makeDegenerateButton.classList.toggle("is-hidden", state.mode !== "svd");
+  elements.perturbRotationButton.classList.toggle("is-hidden", state.mode !== "polar");
+}
+
 function syncMatrixGrid() {
   const inputs = Array.from(elements.matrixGrid.querySelectorAll("input"));
   inputs.forEach((input) => {
@@ -859,7 +861,7 @@ function updateStatusCopy() {
     : (state.language === "zhTW" ? "可逆" : "invertible");
   const suffix = state.lastError
     ? (state.language === "zhTW" ? ` 目前模式警告：${state.lastError}` : ` Current mode warning: ${state.lastError}`)
-    : (state.language === "zhTW" ? " 按下進行分解以重新整理因子卡片與說明區。" : " Press Decompose to refresh the factor cards and explanation panels.");
+    : (state.language === "zhTW" ? " 變更輸入後，結果會即時重新整理。" : " Results refresh automatically as the input changes.");
   elements.statusCopy.textContent = state.language === "zhTW"
     ? `目前矩陣${invertibility}；行列式 ${formatNumber(det)}，估計秩 ${rank}。${suffix}`
     : `The current matrix is ${invertibility}; determinant ${formatNumber(det)} and estimated rank ${rank}.${suffix}`;
@@ -875,14 +877,25 @@ function updateReadouts() {
 }
 
 function updateHeroBreakdown() {
-  elements.heroEquation.textContent = getEquationText();
+  const equation = getEquationText();
+  if (window.katex) {
+    window.katex.render(equation, elements.heroEquation, {
+      throwOnError: false,
+      displayMode: true,
+    });
+  } else {
+    elements.heroEquation.textContent = equation;
+  }
   elements.heroEquationNote.textContent = getHeroEquationNote();
 
   const cards = [buildHeroMatrixCard("A", state.matrix, "symmetric")];
   if (state.factors.length > 0) {
-    state.factors.slice(0, 3).forEach((factor) => {
+    state.factors
+      .filter((factor) => factor.title !== "A")
+      .slice(0, 3)
+      .forEach((factor) => {
       cards.push(buildHeroMatrixCard(`${factor.title} · ${factor.tag}`, factor.matrix, factor.kind.toLowerCase()));
-    });
+      });
   }
   elements.heroMatrixGrid.innerHTML = cards.join("");
 }
@@ -908,6 +921,7 @@ function setMode(modeKey) {
   renderModeButtons();
   syncMatrixGrid();
   updateModeCopy();
+  updateModeActions();
   updateAll(false);
 }
 
@@ -926,9 +940,9 @@ function applyStaticTranslations() {
   document.getElementById("matrix-controller-title").textContent = t("matrixControllerTitle");
   document.getElementById("matrix-controller-subtitle").textContent = t("matrixControllerSubtitle");
   document.getElementById("fill-preset").textContent = t("loadPreset");
-  document.getElementById("decompose").textContent = t("decompose");
   document.getElementById("make-degenerate").textContent = t("makeDegenerate");
   document.getElementById("perturb-rotation").textContent = t("perturbRotation");
+  document.getElementById("randomize").textContent = t("randomize");
   document.getElementById("randomize").setAttribute("aria-label", t("randomize"));
   document.getElementById("mode-summary-title").textContent = t("modeSummaryTitle");
   document.getElementById("pipeline-status-title").textContent = t("pipelineStatusTitle");
@@ -937,6 +951,7 @@ function applyStaticTranslations() {
   document.getElementById("math-title").textContent = t("mathTitle");
   document.getElementById("close-math").textContent = t("close");
   elements.openMathButton.setAttribute("aria-label", t("mathButtonAria"));
+  elements.languageToggle.textContent = state.language === "en" ? "中" : "Eng";
 }
 
 function updateAll() {
@@ -1023,7 +1038,6 @@ function bindUI() {
     updateAll();
   });
 
-  elements.decomposeButton.addEventListener("click", () => updateAll());
   elements.makeDegenerateButton.addEventListener("click", makeDegenerate);
   elements.perturbRotationButton.addEventListener("click", perturbRotation);
   elements.randomizeButton.addEventListener("click", randomizeCurrentMatrix);
@@ -1061,7 +1075,8 @@ function init() {
   applyStaticTranslations();
   syncMatrixGrid();
   updateModeCopy();
-  updateAll(true);
+  updateModeActions();
+  updateAll();
 }
 
 init();
