@@ -94,20 +94,6 @@
       align-items: flex-start;
     }
 
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--blue);
-      border: 1px solid rgba(136, 192, 208, 0.25);
-      background: rgba(136, 192, 208, 0.08);
-    }
-
     .hero-actions {
       display: flex;
       justify-content: space-between;
@@ -474,6 +460,20 @@
       font-size: 0.9rem;
     }
 
+    .status-body {
+      margin: 0;
+      color: var(--fog-0);
+      line-height: 1.7;
+      font-size: 0.96rem;
+    }
+
+    .status-warning {
+      margin-top: 12px;
+      color: var(--gold);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
     #math-modal[hidden] {
       display: none;
     }
@@ -769,9 +769,6 @@
     <section class="hero panel">
       <div class="hero-top">
         <div>
-          <div class="hero-actions">
-            <div id="hero-eyebrow" class="eyebrow">gfx-lab / 3x3 factorization workbench</div>
-          </div>
           <h1 id="hero-title">Matrix Decomposition Playground</h1>
           <p id="hero-copy">
             Switch decomposition modes, edit the matrix by cell or slider, trigger factorization, and compare each split through its matrix form, use case, and engineering intuition.
@@ -823,19 +820,6 @@
           </div>
         </section>
 
-        <section>
-          <div class="section-title">
-            <h3 id="mode-summary-title">Mode Summary</h3>
-          </div>
-          <p id="mode-summary" class="mode-summary"></p>
-        </section>
-
-        <section>
-          <div class="section-title">
-            <h3 id="pipeline-status-title">Pipeline Status</h3>
-          </div>
-          <p id="status-copy" class="status-copy"></p>
-        </section>
       </aside>
 
       <section class="panel stage">
@@ -860,12 +844,12 @@
 
         <div class="stage-footer">
           <div class="callout">
-            <strong id="factorization-focus-title">Factorization Focus</strong>
-            <p id="factorization-focus-copy"></p>
+            <strong id="mode-summary-title">Mode Summary</strong>
+            <p id="mode-summary" class="mode-summary"></p>
           </div>
           <div class="callout">
-            <strong id="knowledge-focus-title">Knowledge Focus</strong>
-            <p id="knowledge-focus-copy"></p>
+            <strong id="pipeline-status-title">Pipeline Status</strong>
+            <p id="status-copy" class="status-copy"></p>
           </div>
         </div>
       </section>

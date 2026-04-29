@@ -9,13 +9,29 @@ const MODES = {
       zhTW: "投影與形變：球體會沿著奇異向量方向被拉成橢球。",
     },
     matrixNote: {
-      en: "Use the sample matrix to see non-uniform scaling. The third singular value will collapse in the degenerate scenario.",
-      zhTW: "用這個範例觀察非等向縮放。退化情境下第三個奇異值會塌成接近 0。",
+      en: "The preset is full-rank with clearly separated singular values, which makes the stretch directions easy to read. Randomize samples another well-conditioned anisotropic transform.",
+      zhTW: "這個 preset 是 full-rank 而且奇異值差異明顯，方便觀察主軸伸縮。隨機按鈕也會產生另一個條件良好的非等向變換。",
+    },
+    application: {
+      en: {
+        form: "UΣV^T",
+        matrixType: "Any matrix",
+        use: "DLT, fundamental matrix estimation, ICP / point-cloud alignment",
+        intuition: "Most universal. Excellent for null-space extraction and numerically very stable, but also the most expensive.",
+        summary: "SVD 幾乎什麼矩陣都能用，所以常被當成最後的穩定解法。做 DLT、基本矩陣估計或 ICP 對齊時，很多關鍵步驟其實都在找最小奇異值對應的方向，也就是你真正想要的 null space；代價是它通常也是這幾種分解裡最貴的一個。",
+      },
+      zhTW: {
+        form: "UΣV^T",
+        matrixType: "任意矩陣",
+        use: "DLT、基本矩陣 F 計算、ICP 點雲對齊",
+        intuition: "最萬能。很適合找 null space，數值穩定性高，但計算代價也最高。",
+        summary: "SVD 幾乎什麼矩陣都能用，所以常被當成最後的穩定解法。做 DLT、基本矩陣估計或 ICP 對齊時，很多關鍵步驟其實都在找最小奇異值對應的方向，也就是你真正想要的 null space；代價是它通常也是這幾種分解裡最貴的一個。",
+      },
     },
     preset: [
-      [2.1, 0.4, 0.1],
-      [0.5, 1.8, -0.2],
-      [0.2, -0.1, 0.5],
+      [2.072, -0.9, -0.15],
+      [1.054, 1.002, 0.179],
+      [0.403, -0.167, 0.436],
     ],
   },
   rq: {
@@ -26,13 +42,29 @@ const MODES = {
       zhTW: "相機拆解：上三角因子對應內參，正交因子對應姿態方向。",
     },
     matrixNote: {
-      en: "Adjust the top-right values to shift the principal point. The frustum intuition comes from the triangular intrinsic matrix.",
-      zhTW: "調整右上角數值可觀察主點偏移。視錐體直覺來自三角形內參矩陣。",
+      en: "The preset looks like a realistic calibration-style matrix: pixel-scale intrinsics multiplied by a mild camera rotation. Randomize keeps focal lengths and principal point in plausible ranges.",
+      zhTW: "這個 preset 比較像真實標定矩陣：像素尺度的內參乘上輕微相機旋轉。隨機按鈕也會把焦距與主點限制在合理範圍內。",
+    },
+    application: {
+      en: {
+        form: "RQ",
+        matrixType: "Square matrices",
+        use: "Camera calibration, splitting projection matrices into K and R",
+        intuition: "Vision-specific. Upper-triangular factor on the left behaves like intrinsics, orthogonal factor on the right behaves like rotation.",
+        summary: "RQ 幾乎就是為相機模型而生的。當你手上有投影矩陣或 3x3 相機子矩陣，最想知道的通常不是它本身，而是裡面的內參 K 和旋轉 R；這時 RQ 能直接把這兩層意思拆開，讀起來比一般分解更貼近視覺工程。",
+      },
+      zhTW: {
+        form: "RQ",
+        matrixType: "任意方陣",
+        use: "相機標定，從投影矩陣拆出 K 與 R",
+        intuition: "視覺專用。左邊上三角像內參，右邊正交矩陣像旋轉。",
+        summary: "RQ 幾乎就是為相機模型而生的。當你手上有投影矩陣或 3x3 相機子矩陣，最想知道的通常不是它本身，而是裡面的內參 K 和旋轉 R；這時 RQ 能直接把這兩層意思拆開，讀起來比一般分解更貼近視覺工程。",
+      },
     },
     preset: [
-      [471.731, 89.891, 249.612],
-      [-125.289, 467.507, 223.458],
-      [-0.259, 0.0, 0.966],
+      [841.391, -114.601, 232.103],
+      [169.147, 793.985, 150.59],
+      [0.12, 0.089, 0.989],
     ],
   },
   qr: {
@@ -43,13 +75,29 @@ const MODES = {
       zhTW: "正交化與最小平方法：左側因子是正交基底，右側因子是在該基底下的係數。",
     },
     matrixNote: {
-      en: "QR is the standard numerical tool for stable orthogonalization. It is common in least-squares solvers and iterative methods.",
-      zhTW: "QR 是最標準的數值正交化工具，常見於最小平方法與各種迭代法。",
+      en: "The preset comes from an orthonormal basis multiplied by a moderate upper-triangular coefficient matrix. Randomize preserves that least-squares friendly scale.",
+      zhTW: "這個 preset 來自正交基底乘上中等尺度的上三角係數矩陣。隨機按鈕也會維持這種適合最小平方法的量級。",
+    },
+    application: {
+      en: {
+        form: "QR",
+        matrixType: "Any matrix",
+        use: "Orthogonalization, least-squares solvers",
+        intuition: "Standard workhorse. Stable version of Gram-Schmidt, with Q on the left.",
+        summary: "QR 很像數值線代裡的日常工具。要做正交化、解 least squares，或把一組彼此糾纏的向量整理成穩定基底時，通常先想到它；它不像 SVD 那麼重，但在實務上已經足夠穩，而且速度更好。",
+      },
+      zhTW: {
+        form: "QR",
+        matrixType: "任意矩陣",
+        use: "正交化過程、解線性最小平方法",
+        intuition: "標準工具。Q 在左，常見於較穩定的 Gram-Schmidt 實作。",
+        summary: "QR 很像數值線代裡的日常工具。要做正交化、解 least squares，或把一組彼此糾纏的向量整理成穩定基底時，通常先想到它；它不像 SVD 那麼重，但在實務上已經足夠穩，而且速度更好。",
+      },
     },
     preset: [
-      [1.2, 0.4, -0.2],
-      [0.8, 1.7, 0.3],
-      [0.1, -0.5, 1.4],
+      [1.529, 0.081, -0.374],
+      [0.423, 1.312, 0.155],
+      [0.207, 0.194, 0.899],
     ],
   },
   cholesky: {
@@ -60,13 +108,29 @@ const MODES = {
       zhTW: "共變異數分解：對稱正定矩陣可拆成建立基底的下三角因子。",
     },
     matrixNote: {
-      en: "This preset is symmetric positive definite. Cholesky is only valid when all leading pivots stay positive.",
-      zhTW: "這個 preset 是對稱正定矩陣。Cholesky 只在所有主子式維持正值時有效。",
+      en: "The preset behaves like a small covariance matrix: symmetric, positive definite, and safely away from singularity. Randomize always regenerates an SPD matrix instead of risking invalid input.",
+      zhTW: "這個 preset 很像小型共變異數矩陣：對稱、正定，而且離奇異情況有安全距離。隨機按鈕也會保證重新產生 SPD 矩陣，不會亂跳成無效輸入。",
+    },
+    application: {
+      en: {
+        form: "LL^T",
+        matrixType: "Symmetric positive definite",
+        use: "Bundle adjustment, Kalman filtering",
+        intuition: "Speed king. Much faster than generic LU in the right setting. If you see covariance matrices or A^TA, think Cholesky first.",
+        summary: "只要矩陣是對稱正定，Cholesky 幾乎就是第一選擇。Bundle adjustment、Kalman filter 和各種 covariance 更新裡常常會遇到這種矩陣；這時不需要繞去做更通用但更重的分解，直接用 Cholesky 通常最快，也最符合工程直覺。",
+      },
+      zhTW: {
+        form: "LL^T",
+        matrixType: "對稱正定矩陣",
+        use: "Bundle Adjustment、卡爾曼濾波",
+        intuition: "速度之王。看到共變異數矩陣或 A^TA，通常先想到它。",
+        summary: "只要矩陣是對稱正定，Cholesky 幾乎就是第一選擇。Bundle adjustment、Kalman filter 和各種 covariance 更新裡常常會遇到這種矩陣；這時不需要繞去做更通用但更重的分解，直接用 Cholesky 通常最快，也最符合工程直覺。",
+      },
     },
     preset: [
-      [4, 6, 10],
-      [6, 25, 19],
-      [10, 19, 62],
+      [5.76, 1.68, 0.72],
+      [1.68, 3.73, 1.11],
+      [0.72, 1.11, 2.03],
     ],
   },
   eigen: {
@@ -77,13 +141,29 @@ const MODES = {
       zhTW: "主成分風格讀法：正交特徵向量定義穩定方向，特徵值表示各軸反應強度。",
     },
     matrixNote: {
-      en: "The preset is symmetric, so the eigenbasis is orthogonal and the Jacobi iteration converges cleanly.",
-      zhTW: "這個 preset 是對稱矩陣，所以特徵基底正交，Jacobi 迭代也較穩定。",
+      en: "The preset is a symmetric operator with separated principal responses, similar to a PCA or structure-tensor example. Randomize keeps the matrix symmetric so the eigenbasis stays orthogonal.",
+      zhTW: "這個 preset 是主反應方向分離明顯的對稱算子，接近 PCA 或 structure tensor 常見的例子。隨機按鈕也會維持對稱性，讓特徵基底保持正交。",
+    },
+    application: {
+      en: {
+        form: "VΛV^-1",
+        matrixType: "Square matrices",
+        use: "PCA, structure tensor analysis",
+        intuition: "Finds principal directions. For symmetric matrices, eigen-decomposition lines up closely with SVD.",
+        summary: "如果你想知道資料或算子最主要往哪個方向變化，Eigen 通常最直接。PCA、structure tensor、慣性主軸這類問題，本質上都在問特徵向量和特徵值；對稱矩陣時它尤其好讀，因為每個方向的意義會非常乾淨。",
+      },
+      zhTW: {
+        form: "VΛV^-1",
+        matrixType: "方陣",
+        use: "PCA、Structure Tensor",
+        intuition: "找矩陣的主方向。若矩陣對稱，會和 SVD 的解讀非常接近。",
+        summary: "如果你想知道資料或算子最主要往哪個方向變化，Eigen 通常最直接。PCA、structure tensor、慣性主軸這類問題，本質上都在問特徵向量和特徵值；對稱矩陣時它尤其好讀，因為每個方向的意義會非常乾淨。",
+      },
     },
     preset: [
-      [2, 1, 0],
-      [1, 2, 1],
-      [0, 1, 2],
+      [4.052, 0.834, 0.486],
+      [0.834, 2.444, 0.337],
+      [0.486, 0.337, 0.904],
     ],
   },
   polar: {
@@ -94,13 +174,29 @@ const MODES = {
       zhTW: "姿態修復：從接近旋轉的矩陣中抽出最接近的正交旋轉，分離殘餘伸縮。",
     },
     matrixNote: {
-      en: "Use perturb rotation to spoil orthogonality, then recover the clean rotation with polar decomposition.",
-      zhTW: "先用 perturb rotation 破壞正交性，再用 polar decomposition 恢復乾淨旋轉。",
+      en: "The preset starts near a real pose matrix: mostly rotation, with a small symmetric stretch. Randomize keeps samples close to rigid motion so the repair intuition stays clear.",
+      zhTW: "這個 preset 一開始就接近真實姿態矩陣：大部分是旋轉，只帶一點對稱伸縮。隨機按鈕也會讓樣本保持接近剛體運動，方便觀察修復直覺。",
+    },
+    application: {
+      en: {
+        form: "QS",
+        matrixType: "Square matrices",
+        use: "Rotation repair, deformation analysis",
+        intuition: "Separates a transform into pure rotation and pure stretch. Useful when numerical drift corrupts a rotation matrix.",
+        summary: "Polar 很適合處理『這個矩陣本來應該像旋轉，但被數值誤差弄髒了』的情況。做姿態更新、模擬形變或累積很多小步旋轉之後，常需要把旋轉成分和殘留伸縮重新拆開；這時它比直接看原矩陣直觀得多。",
+      },
+      zhTW: {
+        form: "QS",
+        matrixType: "方陣",
+        use: "矩陣正交化修復、形變分析",
+        intuition: "把任意轉換拆成純旋轉與純縮放，常用來修復走樣的旋轉矩陣。",
+        summary: "Polar 很適合處理「這個矩陣本來應該像旋轉，但被數值誤差弄髒了」的情況。做姿態更新、模擬形變或累積很多小步旋轉之後，常需要把旋轉成分和殘留伸縮重新拆開；這時它比直接看原矩陣直觀得多。",
+      },
     },
     preset: [
-      [0.95, 0.31, 0.05],
-      [-0.29, 0.94, -0.12],
-      [0.08, 0.11, 0.98],
+      [1.032, -0.193, -0.075],
+      [0.293, 0.941, -0.122],
+      [0.131, 0.041, 1.01],
     ],
   },
 };
@@ -121,8 +217,6 @@ const elements = {
   modeSummary: document.getElementById("mode-summary"),
   matrixNote: document.getElementById("matrix-note"),
   statusCopy: document.getElementById("status-copy"),
-  factorizationFocusCopy: document.getElementById("factorization-focus-copy"),
-  knowledgeFocusCopy: document.getElementById("knowledge-focus-copy"),
   heroEquation: document.getElementById("hero-equation"),
   heroEquationNote: document.getElementById("hero-equation-note"),
   heroFormulaLabel: document.getElementById("hero-formula-label"),
@@ -160,73 +254,12 @@ const modalCopy = {
 const rank = singularValues.filter((v) => v > 1e-5).length;
 const nullSpaceLivesInV = VT[2];</code></pre>
       <p>Rank is estimated by counting singular values above a small tolerance, so the "Make Degenerate" control visibly crushes one dimension when the smallest singular value falls toward zero.</p>
-      <h3>Knowledge</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Decomposition</th>
-            <th>Form</th>
-            <th>Matrix Type</th>
-            <th>Vision / Robotics Use</th>
-            <th>Engineering Intuition</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>SVD</td>
-            <td>$U\\Sigma V^\\top$</td>
-            <td>Any matrix</td>
-            <td>DLT, fundamental matrix estimation, ICP / point-cloud alignment</td>
-            <td>The most universal tool. Excellent for null-space extraction and numerically very stable, but also the most expensive.</td>
-          </tr>
-          <tr>
-            <td>RQ</td>
-            <td>$RQ$</td>
-            <td>Square matrices</td>
-            <td>Camera calibration, splitting projection matrices into $K$ and $R$</td>
-            <td>Vision-specific. Upper-triangular factor on the left acts like intrinsics, orthogonal factor on the right acts like rotation.</td>
-          </tr>
-          <tr>
-            <td>QR</td>
-            <td>$QR$</td>
-            <td>Any matrix</td>
-            <td>Orthogonalization, least-squares solvers</td>
-            <td>Standard numerical workhorse. Stable version of Gram-Schmidt, with $Q$ on the left.</td>
-          </tr>
-          <tr>
-            <td>Cholesky</td>
-            <td>$LL^\\top$</td>
-            <td>Symmetric positive definite</td>
-            <td>Bundle adjustment, Kalman filtering</td>
-            <td>Speed king. Roughly twice as fast as generic LU in the right setting. If you see covariance matrices or $A^\\top A$, think Cholesky first.</td>
-          </tr>
-          <tr>
-            <td>LU / PLU</td>
-            <td>$LU$ or $PLU$</td>
-            <td>Square matrices</td>
-            <td>General linear systems $Ax=b$</td>
-            <td>Matrix form of Gaussian elimination. In practice, pivoted $PLU$ is preferred for stability.</td>
-          </tr>
-          <tr>
-            <td>Eigen</td>
-            <td>$V\\Lambda V^{-1}$</td>
-            <td>Square matrices</td>
-            <td>PCA, structure tensor analysis</td>
-            <td>Finds the matrix's main directions. For symmetric matrices, eigen-decomposition lines up closely with SVD.</td>
-          </tr>
-          <tr>
-            <td>Polar</td>
-            <td>$QS$</td>
-            <td>Square matrices</td>
-            <td>Rotation repair, deformation analysis</td>
-            <td>Separates a transform into pure rotation and pure stretch. Useful when numerical drift corrupts a rotation matrix.</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>The active ${mode} demo shows one slice of this landscape. The table above tells you when a decomposition is a modeling tool, when it is a solver, and when it is mostly a numerical stabilization device.</p>
+      <p>The active ${mode} demo is one slice of a larger toolbox. The main point is to read each factor as structure: which part is geometry, which part is scale, and which part is there for numerical stability or modeling convenience.</p>
     `;
   },
-  zhTW: () => `
+  zhTW: () => {
+    const mode = getModeText(state.mode, "label");
+    return `
     <p>這個 playground 把一個 3x3 矩陣視為作用在 $\\mathbb{R}^3$ 向量上的線性映射，但頁面現在聚焦在分解的解讀，而不是 3D 視覺化。</p>
     <p>目前模式會強調某種具有幾何或工程意義的分解。正交矩陣代表旋轉或鏡射，對角矩陣代表沿座標軸縮放，三角矩陣則常用來表達有順序的剪切或相機內參。</p>
     <p>矩陣的三個 column 仍然對應標準基底被變換後的結果：
@@ -241,77 +274,14 @@ const nullSpaceLivesInV = VT[2];</code></pre>
 const rank = singularValues.filter((v) => v > 1e-5).length;
 const nullSpaceLivesInV = VT[2];</code></pre>
     <p>Rank 的估計方式是計算奇異值中大於容差的個數，所以按下「Make Degenerate」之後，你會看到最小奇異值趨近 0，物體也會明顯被壓扁。</p>
-    <h3>Knowledge</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>分解名稱</th>
-          <th>數學形式</th>
-          <th>適用矩陣</th>
-          <th>電腦視覺 / 機器人學應用</th>
-          <th>特點與工程直覺</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>SVD</td>
-          <td>$U\\Sigma V^\\top$</td>
-          <td>任意矩陣</td>
-          <td>DLT、基本矩陣 $F$ 計算、ICP 點雲對齊</td>
-          <td>最萬能。找 null space 的神器，數值穩定性最好，但計算代價也最高。</td>
-        </tr>
-        <tr>
-          <td>RQ</td>
-          <td>$RQ$</td>
-          <td>任意方陣</td>
-          <td>相機標定，從投影矩陣拆出 $K$ 與 $R$</td>
-          <td>視覺專用。左邊上三角因子像內參，右邊正交因子像旋轉。</td>
-        </tr>
-        <tr>
-          <td>QR</td>
-          <td>$QR$</td>
-          <td>任意矩陣</td>
-          <td>正交化過程、最小平方法</td>
-          <td>標準工具。可把它看成 Gram-Schmidt 的數值穩定版本，$Q$ 在左。</td>
-        </tr>
-        <tr>
-          <td>Cholesky</td>
-          <td>$LL^\\top$</td>
-          <td>對稱正定矩陣</td>
-          <td>Bundle Adjustment、卡爾曼濾波</td>
-          <td>速度之王。比一般 LU 更快；看到共變異數矩陣或 $A^\\top A$ 時通常優先想到它。</td>
-        </tr>
-        <tr>
-          <td>LU / PLU</td>
-          <td>$LU$ 或 $PLU$</td>
-          <td>方陣</td>
-          <td>求解一般線性方程組 $Ax=b$</td>
-          <td>高斯消去法的矩陣版本。實務上通常加入 pivoting，使用較穩定的 $PLU$。</td>
-        </tr>
-        <tr>
-          <td>Eigen</td>
-          <td>$V\\Lambda V^{-1}$</td>
-          <td>方陣</td>
-          <td>PCA、Structure Tensor</td>
-          <td>找矩陣的主方向。若矩陣對稱，特徵分解和 SVD 的幾何意義會非常接近。</td>
-        </tr>
-        <tr>
-          <td>Polar</td>
-          <td>$QS$</td>
-          <td>方陣</td>
-          <td>矩陣正交化修復、形變分析</td>
-          <td>把任意轉換拆成純旋轉與純縮放。常用來修復數值誤差導致走樣的旋轉矩陣。</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>目前頁面只把其中幾種分解做成互動視覺化，但這張表可以幫使用者快速判斷某個分解到底是拿來建模、拿來求解，還是拿來做數值穩定化。</p>
-  `,
+    <p>目前的 ${mode} 模式只是整個工具箱中的一個切面。重點不是背表格，而是讀懂每個因子各自代表什麼結構：哪一部分是幾何方向、哪一部分是縮放，哪一部分是為了數值穩定或工程建模而存在。</p>
+  `;
+  },
 };
 
 const I18N = {
   en: {
     htmlLang: "en",
-    heroEyebrow: "gfx-lab / 3x3 factorization workbench",
     heroTitle: "Matrix Decomposition Playground",
     heroCopy: "Switch decomposition modes, edit the matrix directly, and compare each split through its matrix form, use case, and engineering intuition.",
     metricModeLabel: "Active Mode",
@@ -322,41 +292,36 @@ const I18N = {
     modesTitle: "Modes",
     modesSubtitle: "Preset-driven 3x3 examples",
     matrixControllerTitle: "Matrix Controller",
-    matrixControllerSubtitle: "Type or slide values",
+    matrixControllerSubtitle: "Type matrix values",
     loadPreset: "Reset",
     makeDegenerate: "Make Degenerate",
     perturbRotation: "Perturb Rotation",
     randomize: "Randomize",
     modeSummaryTitle: "Mode Summary",
-    pipelineStatusTitle: "Pipeline Status",
-    factorizationFocusTitle: "Factorization Focus",
-    knowledgeFocusTitle: "Knowledge Focus",
+    pipelineStatusTitle: "Application Context",
     mathTitle: "Math Behind the Scene",
     close: "Close",
     mathButtonAria: "Explain the math",
   },
   zhTW: {
     htmlLang: "zh-Hant",
-    heroEyebrow: "gfx-lab / 3x3 分解工作台",
     heroTitle: "矩陣分解互動實驗室",
     heroCopy: "切換分解模式、直接編輯矩陣，並從矩陣形式、使用場合與工程直覺比較每一種拆解。",
     metricModeLabel: "目前模式",
     metricDetLabel: "行列式",
-    metricRankLabel: "估計秩",
+    metricRankLabel: "Estimated Rank",
     heroFormulaLabel: "目前分解公式",
     heroMatricesLabel: "觀測矩陣與因子",
     modesTitle: "模式",
     modesSubtitle: "以 preset 驅動的 3x3 範例",
     matrixControllerTitle: "矩陣控制區",
-    matrixControllerSubtitle: "可直接輸入或滑動調整",
+    matrixControllerSubtitle: "可直接輸入矩陣數值",
     loadPreset: "重置",
     makeDegenerate: "製造退化",
     perturbRotation: "擾動旋轉",
     randomize: "隨機矩陣",
     modeSummaryTitle: "模式摘要",
-    pipelineStatusTitle: "分解狀態",
-    factorizationFocusTitle: "分解重點",
-    knowledgeFocusTitle: "知識重點",
+    pipelineStatusTitle: "應用場域",
     mathTitle: "畫面背後的數學",
     close: "關閉",
     mathButtonAria: "說明數學原理",
@@ -563,6 +528,134 @@ function orthonormalizeColumns(matrix) {
   return [c1, c2, c3];
 }
 
+function roundValue(value) {
+  return Number(value.toFixed(3));
+}
+
+function roundMatrix(matrix) {
+  return matrix.map((row) => row.map((value) => roundValue(value)));
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function makeRotationMatrix(rx, ry, rz) {
+  const cx = Math.cos(rx);
+  const sx = Math.sin(rx);
+  const cy = Math.cos(ry);
+  const sy = Math.sin(ry);
+  const cz = Math.cos(rz);
+  const sz = Math.sin(rz);
+
+  const Rx = [
+    [1, 0, 0],
+    [0, cx, -sx],
+    [0, sx, cx],
+  ];
+  const Ry = [
+    [cy, 0, sy],
+    [0, 1, 0],
+    [-sy, 0, cy],
+  ];
+  const Rz = [
+    [cz, -sz, 0],
+    [sz, cz, 0],
+    [0, 0, 1],
+  ];
+
+  return multiplyMatrices(Rz, multiplyMatrices(Ry, Rx));
+}
+
+function randomOrthogonalMatrix(angleScale = 0.45) {
+  return makeRotationMatrix(
+    randomBetween(-angleScale, angleScale),
+    randomBetween(-angleScale, angleScale),
+    randomBetween(-angleScale, angleScale)
+  );
+}
+
+function randomDiagonal(values) {
+  return [
+    [values[0], 0, 0],
+    [0, values[1], 0],
+    [0, 0, values[2]],
+  ];
+}
+
+function randomLowerTriangular(diagRange, offDiagRange) {
+  return [
+    [randomBetween(diagRange[0], diagRange[1]), 0, 0],
+    [randomBetween(offDiagRange[0], offDiagRange[1]), randomBetween(diagRange[0], diagRange[1]), 0],
+    [randomBetween(offDiagRange[0], offDiagRange[1]), randomBetween(offDiagRange[0], offDiagRange[1]), randomBetween(diagRange[0], diagRange[1])],
+  ];
+}
+
+function randomUpperTriangular(diagRange, offDiagRange) {
+  return [
+    [randomBetween(diagRange[0], diagRange[1]), randomBetween(offDiagRange[0], offDiagRange[1]), randomBetween(offDiagRange[0], offDiagRange[1])],
+    [0, randomBetween(diagRange[0], diagRange[1]), randomBetween(offDiagRange[0], offDiagRange[1])],
+    [0, 0, randomBetween(diagRange[0], diagRange[1])],
+  ];
+}
+
+function generateRandomMatrixForMode(mode) {
+  if (mode === "svd") {
+    const U = randomOrthogonalMatrix(0.55);
+    const V = randomOrthogonalMatrix(0.55);
+    const singularValues = [
+      randomBetween(1.8, 3.2),
+      randomBetween(0.8, 1.7),
+      randomBetween(0.2, 0.7),
+    ];
+    return roundMatrix(multiplyMatrices(U, multiplyMatrices(randomDiagonal(singularValues), transpose(V))));
+  }
+
+  if (mode === "rq") {
+    const K = [
+      [randomBetween(650, 1200), randomBetween(-35, 35), randomBetween(220, 420)],
+      [0, randomBetween(620, 1100), randomBetween(140, 320)],
+      [0, 0, 1],
+    ];
+    const R = randomOrthogonalMatrix(0.3);
+    return roundMatrix(multiplyMatrices(K, R));
+  }
+
+  if (mode === "qr") {
+    const Q = randomOrthogonalMatrix(0.45);
+    const R = randomUpperTriangular([0.7, 2.4], [-0.9, 0.9]);
+    return roundMatrix(multiplyMatrices(Q, R));
+  }
+
+  if (mode === "cholesky") {
+    const L = randomLowerTriangular([1.0, 2.8], [-0.8, 0.8]);
+    return roundMatrix(multiplyMatrices(L, transpose(L)));
+  }
+
+  if (mode === "eigen") {
+    const Q = randomOrthogonalMatrix(0.5);
+    const eigenvalues = [
+      randomBetween(2.8, 5.2),
+      randomBetween(1.2, 2.6),
+      randomBetween(0.3, 1.1),
+    ];
+    return roundMatrix(multiplyMatrices(Q, multiplyMatrices(randomDiagonal(eigenvalues), transpose(Q))));
+  }
+
+  const Q = randomOrthogonalMatrix(0.28);
+  const S = [
+    [randomBetween(0.9, 1.12), randomBetween(-0.08, 0.08), randomBetween(-0.05, 0.05)],
+    [0, randomBetween(0.9, 1.12), randomBetween(-0.08, 0.08)],
+    [0, 0, randomBetween(0.92, 1.08)],
+  ];
+  const symmetricStretch = [
+    [S[0][0], S[0][1], S[0][2]],
+    [S[0][1], S[1][1], S[1][2]],
+    [S[0][2], S[1][2], S[2][2]],
+  ];
+  return roundMatrix(multiplyMatrices(Q, symmetricStretch));
+}
+
 function reverseRows(matrix) {
   return [...matrix].reverse().map((row) => [...row]);
 }
@@ -736,10 +829,10 @@ function buildMatrixMarkup(matrix) {
   `;
 }
 
-function buildHeroMatrixCard(title, matrix, kind = "symmetric") {
+function buildHeroMatrixCard(title, tag, matrix, kind = "symmetric") {
   return `
     <article class="hero-matrix-card">
-      <div class="factor-tag ${kind}">${kind === "symmetric" ? "Observed" : title}</div>
+      <div class="factor-tag ${kind}">${tag}</div>
       <h3>${title}</h3>
       ${buildMatrixMarkup(matrix)}
     </article>
@@ -854,26 +947,15 @@ function syncMatrixGrid() {
 }
 
 function updateStatusCopy() {
-  const det = determinant(state.matrix);
-  const rank = estimateRank(state.matrix);
-  const invertibility = Math.abs(det) < 1e-5
-    ? (state.language === "zhTW" ? "接近奇異" : "nearly singular")
-    : (state.language === "zhTW" ? "可逆" : "invertible");
-  const suffix = state.lastError
-    ? (state.language === "zhTW" ? ` 目前模式警告：${state.lastError}` : ` Current mode warning: ${state.lastError}`)
-    : (state.language === "zhTW" ? " 變更輸入後，結果會即時重新整理。" : " Results refresh automatically as the input changes.");
-  elements.statusCopy.textContent = state.language === "zhTW"
-    ? `目前矩陣${invertibility}；行列式 ${formatNumber(det)}，估計秩 ${rank}。${suffix}`
-    : `The current matrix is ${invertibility}; determinant ${formatNumber(det)} and estimated rank ${rank}.${suffix}`;
-}
+  const application = MODES[state.mode].application[state.language];
+  const warning = state.lastError
+    ? `<div class="status-warning">${state.language === "zhTW" ? `目前輸入警告：${state.lastError}` : `Current input warning: ${state.lastError}`}</div>`
+    : "";
 
-function updateReadouts() {
-  elements.factorizationFocusCopy.textContent = state.language === "zhTW"
-    ? `目前模式 ${getModeText(state.mode, "label")} 著重的是 ${MODES[state.mode].note[state.language]}`
-    : `The active ${getModeText(state.mode, "label")} mode emphasizes this split: ${MODES[state.mode].note[state.language]}`;
-  elements.knowledgeFocusCopy.textContent = state.language === "zhTW"
-    ? "若你想知道某種分解何時該用，重點通常看三件事：矩陣型態是否符合、你是要解方程還是解釋幾何，以及數值穩定性是否比速度更重要。"
-    : "When choosing a decomposition, the main questions are: does the matrix structure qualify, are you solving a system or explaining geometry, and is numerical stability more important than raw speed?";
+  elements.statusCopy.innerHTML = `
+    <p class="status-body">${application.summary}</p>
+    ${warning}
+  `;
 }
 
 function updateHeroBreakdown() {
@@ -888,13 +970,14 @@ function updateHeroBreakdown() {
   }
   elements.heroEquationNote.textContent = getHeroEquationNote();
 
-  const cards = [buildHeroMatrixCard("A", state.matrix, "symmetric")];
+  const observedTag = state.language === "zhTW" ? "觀測值" : "Observed";
+  const cards = [buildHeroMatrixCard("A", observedTag, state.matrix, "symmetric")];
   if (state.factors.length > 0) {
     state.factors
       .filter((factor) => factor.title !== "A")
       .slice(0, 3)
       .forEach((factor) => {
-      cards.push(buildHeroMatrixCard(`${factor.title} · ${factor.tag}`, factor.matrix, factor.kind.toLowerCase()));
+      cards.push(buildHeroMatrixCard(factor.title, factor.tag, factor.matrix, factor.kind.toLowerCase()));
       });
   }
   elements.heroMatrixGrid.innerHTML = cards.join("");
@@ -927,7 +1010,6 @@ function setMode(modeKey) {
 
 function applyStaticTranslations() {
   document.documentElement.lang = I18N[state.language].htmlLang;
-  document.getElementById("hero-eyebrow").textContent = t("heroEyebrow");
   document.getElementById("hero-title").textContent = t("heroTitle");
   document.getElementById("hero-copy").textContent = t("heroCopy");
   document.getElementById("metric-mode-label").textContent = t("metricModeLabel");
@@ -946,8 +1028,6 @@ function applyStaticTranslations() {
   document.getElementById("randomize").setAttribute("aria-label", t("randomize"));
   document.getElementById("mode-summary-title").textContent = t("modeSummaryTitle");
   document.getElementById("pipeline-status-title").textContent = t("pipelineStatusTitle");
-  document.getElementById("factorization-focus-title").textContent = t("factorizationFocusTitle");
-  document.getElementById("knowledge-focus-title").textContent = t("knowledgeFocusTitle");
   document.getElementById("math-title").textContent = t("mathTitle");
   document.getElementById("close-math").textContent = t("close");
   elements.openMathButton.setAttribute("aria-label", t("mathButtonAria"));
@@ -958,7 +1038,7 @@ function updateAll() {
   updateFactorCards();
   updateMetrics();
   updateStatusCopy();
-  updateReadouts();
+  updateModeCopy();
   updateHeroBreakdown();
 }
 
@@ -1009,9 +1089,7 @@ function buildMatrixInputs() {
 }
 
 function randomizeCurrentMatrix() {
-  state.matrix = state.matrix.map((row) =>
-    row.map(() => Number((Math.random() * 2.4 - 1.2).toFixed(3)))
-  );
+  state.matrix = generateRandomMatrixForMode(state.mode);
   syncMatrixGrid();
   updateAll();
 }
