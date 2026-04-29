@@ -35,6 +35,23 @@ const MODES = {
       [-0.259, 0.0, 0.966],
     ],
   },
+  qr: {
+    label: { en: "QR", zhTW: "QR" },
+    short: { en: "orthogonal times upper triangular", zhTW: "正交乘以上三角" },
+    note: {
+      en: "Orthogonalization and least-squares: the left factor is an orthonormal basis and the right factor carries coefficients in that basis.",
+      zhTW: "正交化與最小平方法：左側因子是正交基底，右側因子是在該基底下的係數。",
+    },
+    matrixNote: {
+      en: "QR is the standard numerical tool for stable orthogonalization. It is common in least-squares solvers and iterative methods.",
+      zhTW: "QR 是最標準的數值正交化工具，常見於最小平方法與各種迭代法。",
+    },
+    preset: [
+      [1.2, 0.4, -0.2],
+      [0.8, 1.7, 0.3],
+      [0.1, -0.5, 1.4],
+    ],
+  },
   cholesky: {
     label: { en: "Cholesky", zhTW: "Cholesky" },
     short: { en: "covariance square root", zhTW: "共變異數平方根" },
@@ -93,24 +110,17 @@ const modeKeys = Object.keys(MODES);
 const state = {
   mode: "svd",
   matrix: cloneMatrix(MODES.svd.preset),
-  slidersEnabled: true,
-  isAnimating: true,
   language: getStoredLanguage(),
   factors: [],
-  pipelineAnimated: false,
   lastError: "",
 };
 
 const elements = {
   modeGrid: document.getElementById("mode-grid"),
   matrixGrid: document.getElementById("matrix-grid"),
-  sliderGrid: document.getElementById("slider-grid"),
   modeSummary: document.getElementById("mode-summary"),
   matrixNote: document.getElementById("matrix-note"),
   statusCopy: document.getElementById("status-copy"),
-  factorStrip: document.getElementById("factor-strip"),
-  geometryCopy: document.getElementById("geometry-copy"),
-  numericalCopy: document.getElementById("numerical-copy"),
   factorizationFocusCopy: document.getElementById("factorization-focus-copy"),
   knowledgeFocusCopy: document.getElementById("knowledge-focus-copy"),
   heroEquation: document.getElementById("hero-equation"),
@@ -128,11 +138,9 @@ const elements = {
   mathContent: document.getElementById("math-content"),
   fillPresetButton: document.getElementById("fill-preset"),
   decomposeButton: document.getElementById("decompose"),
-  animateSplitButton: document.getElementById("animate-split"),
   makeDegenerateButton: document.getElementById("make-degenerate"),
   perturbRotationButton: document.getElementById("perturb-rotation"),
   randomizeButton: document.getElementById("randomize"),
-  toggleSlidersButton: document.getElementById("toggle-sliders"),
 };
 
 const modalCopy = {
@@ -318,24 +326,15 @@ const I18N = {
     matrixControllerSubtitle: "Type or slide values",
     loadPreset: "Load Preset",
     decompose: "Decompose",
-    animateSplit: "Animate Split",
     makeDegenerate: "Make Degenerate",
     perturbRotation: "Perturb Rotation",
     randomize: "Randomize",
-    sliderModeTitle: "Slider Mode",
-    enabled: "Enabled",
-    hidden: "Hidden",
     modeSummaryTitle: "Mode Summary",
     pipelineStatusTitle: "Pipeline Status",
-    stageCopy: "",
-    geometricReadoutTitle: "Engineering Readout",
-    numericalReadoutTitle: "Numerical Readout",
     factorizationFocusTitle: "Factorization Focus",
     knowledgeFocusTitle: "Knowledge Focus",
     mathTitle: "Math Behind the Scene",
     close: "Close",
-    invalidInput: "Invalid Input",
-    statusTag: "Status",
     mathButtonAria: "Explain the math",
   },
   zhTW: {
@@ -354,24 +353,15 @@ const I18N = {
     matrixControllerSubtitle: "可直接輸入或滑動調整",
     loadPreset: "載入範例",
     decompose: "進行分解",
-    animateSplit: "播放拆解動畫",
     makeDegenerate: "製造退化",
     perturbRotation: "擾動旋轉",
     randomize: "隨機矩陣",
-    sliderModeTitle: "滑桿模式",
-    enabled: "已啟用",
-    hidden: "已隱藏",
     modeSummaryTitle: "模式摘要",
     pipelineStatusTitle: "分解狀態",
-    stageCopy: "",
-    geometricReadoutTitle: "工程讀取",
-    numericalReadoutTitle: "數值讀取",
     factorizationFocusTitle: "分解重點",
     knowledgeFocusTitle: "知識重點",
     mathTitle: "畫面背後的數學",
     close: "關閉",
-    invalidInput: "輸入不合法",
-    statusTag: "狀態",
     mathButtonAria: "說明數學原理",
   },
 };
@@ -391,6 +381,7 @@ function getModeText(modeKey, field) {
 function getEquationText() {
   if (state.mode === "svd") return "A = UΣV^T";
   if (state.mode === "rq") return "A = RQ";
+  if (state.mode === "qr") return "A = QR";
   if (state.mode === "cholesky") return "A = LL^T";
   if (state.mode === "eigen") return "A = QΛQ^T";
   return "A = QS";
@@ -406,6 +397,11 @@ function getHeroEquationNote() {
     return state.language === "zhTW"
       ? "A 會拆成左側上三角內參樣式矩陣 R，以及右側正交旋轉 Q。"
       : "A is split into a left upper-triangular intrinsic-style matrix R and a right orthogonal rotation Q.";
+  }
+  if (state.mode === "qr") {
+    return state.language === "zhTW"
+      ? "A 會拆成左側正交矩陣 Q，以及右側上三角矩陣 R。"
+      : "A is split into a left orthogonal matrix Q and a right upper-triangular matrix R.";
   }
   if (state.mode === "cholesky") {
     return state.language === "zhTW"
@@ -746,7 +742,8 @@ function buildMatrixMarkup(matrix) {
 function buildHeroMatrixCard(title, matrix, kind = "symmetric") {
   return `
     <article class="hero-matrix-card">
-      <div class="factor-tag ${kind}">${title}</div>
+      <div class="factor-tag ${kind}">${kind === "symmetric" ? "Observed" : title}</div>
+      <h3>${title}</h3>
       ${buildMatrixMarkup(matrix)}
     </article>
   `;
@@ -762,9 +759,6 @@ function makeFactorsForMode() {
         { title: "Sigma", tag: state.language === "zhTW" ? "對角" : "Diagonal", kind: "diagonal", matrix: S, desc: state.language === "zhTW" ? `奇異值 ${singularValues.map((value) => formatNumber(value)).join("、")} 描述各主軸的伸縮量。` : `Singular values ${singularValues.map((value) => formatNumber(value)).join(", ")} measure stretch.` },
         { title: "V^T", tag: state.language === "zhTW" ? "正交" : "Orthogonal", kind: "orthogonal", matrix: VT, desc: state.language === "zhTW" ? "右奇異向量會先把輸入基底旋到適合縮放的方向。" : "Right singular vectors rotate the input basis before scaling." },
       ],
-      geometry: state.language === "zhTW"
-        ? "立方體會先旋轉到右奇異基底，再沿正交主軸縮放，最後旋轉回輸出空間。"
-        : "The transformed cube is first rotated into the right-singular basis, stretched along orthogonal axes, then rotated into output space.",
     };
   }
   if (state.mode === "rq") {
@@ -775,9 +769,16 @@ function makeFactorsForMode() {
         { title: "Q", tag: state.language === "zhTW" ? "正交" : "Orthogonal", kind: "orthogonal", matrix: Q, desc: state.language === "zhTW" ? "正交因子承載相機姿態方向。" : "The orthogonal factor carries camera orientation." },
         { title: "A", tag: state.language === "zhTW" ? "觀測值" : "Observed", kind: "symmetric", matrix, desc: state.language === "zhTW" ? "原始矩陣同時混合了校正與姿態資訊。" : "The original matrix mixes calibration and orientation." },
       ],
-      geometry: state.language === "zhTW"
-        ? "先把暖色三角因子讀成校正尺度與偏移，再把藍色正交因子讀成純粹的座標重定向。"
-        : "Read the warm triangular factor as calibration scales and offsets, then the blue orthogonal factor as a pure reorientation of the frame.",
+    };
+  }
+  if (state.mode === "qr") {
+    const { Q, R } = qrDecomposition(matrix);
+    return {
+      factors: [
+        { title: "Q", tag: state.language === "zhTW" ? "正交" : "Orthogonal", kind: "orthogonal", matrix: Q, desc: state.language === "zhTW" ? "Q 提供一組穩定的正交基底。" : "Q provides a stable orthonormal basis." },
+        { title: "R", tag: state.language === "zhTW" ? "上三角" : "Upper Tri", kind: "triangular", matrix: R, desc: state.language === "zhTW" ? "R 記錄原矩陣在正交基底下的係數。" : "R stores the coefficients of the original matrix in that orthogonal basis." },
+        { title: "A", tag: state.language === "zhTW" ? "觀測值" : "Observed", kind: "symmetric", matrix, desc: state.language === "zhTW" ? "原始矩陣可被視為正交化前的輸入。" : "The original matrix is the pre-orthogonalized input." },
+      ],
     };
   }
   if (state.mode === "cholesky") {
@@ -788,9 +789,6 @@ function makeFactorsForMode() {
         { title: "L^T", tag: state.language === "zhTW" ? "上三角" : "Upper Tri", kind: "triangular", matrix: transpose(L), desc: state.language === "zhTW" ? "轉置項補完對稱重建。" : "The transpose completes the symmetric reconstruction." },
         { title: "A", tag: "SPD", kind: "symmetric", matrix, desc: state.language === "zhTW" ? "這是一個對稱正定的共變異數形式。" : "A symmetric positive definite covariance form." },
       ],
-      geometry: state.language === "zhTW"
-        ? "把單位球套用 L 之後，就能得到對應的共變異橢球與其方向。"
-        : "The covariance ellipsoid can be generated by applying L to a unit sphere and then reading the resulting oriented shape.",
     };
   }
   if (state.mode === "eigen") {
@@ -801,9 +799,6 @@ function makeFactorsForMode() {
         { title: "Lambda", tag: state.language === "zhTW" ? "對角" : "Diagonal", kind: "diagonal", matrix: D, desc: state.language === "zhTW" ? `特徵值 ${eigenvalues.map((value) => formatNumber(value)).join("、")} 描述各特徵向量上的反應強度。` : `Eigenvalues ${eigenvalues.map((value) => formatNumber(value)).join(", ")} measure response on each eigenvector.` },
         { title: "Q^T", tag: state.language === "zhTW" ? "正交" : "Orthogonal", kind: "orthogonal", matrix: transpose(Q), desc: state.language === "zhTW" ? "轉置矩陣把標準基底映回特徵基底。" : "Transpose maps the standard basis back into the eigenbasis." },
       ],
-      geometry: state.language === "zhTW"
-        ? "在特徵基底裡，矩陣作用會沿座標軸對齊；各座標可先獨立縮放，再旋回原座標。"
-        : "In the eigenbasis, the action is axis-aligned. Each coordinate scales independently before rotating back.",
     };
   }
   const { Q, S } = polarDecomposition(matrix);
@@ -813,57 +808,25 @@ function makeFactorsForMode() {
       { title: "S", tag: state.language === "zhTW" ? "對稱" : "Symmetric", kind: "symmetric", matrix: S, desc: state.language === "zhTW" ? "殘餘的對稱伸縮記錄輸入矩陣偏離完美旋轉的程度。" : "Residual symmetric stretch records how far the input departs from a perfect rotation." },
       { title: "A", tag: state.language === "zhTW" ? "觀測值" : "Observed", kind: "triangular", matrix, desc: state.language === "zhTW" ? "原始矩陣同時包含旋轉與扭曲。" : "The original matrix contains both rotation and distortion." },
     ],
-    geometry: state.language === "zhTW"
-      ? "Polar 分解會把乾淨的藍色正交框架，從原本污染運動的暖色對稱扭曲中分離出來。"
-      : "The polar split isolates a clean blue frame from the warm symmetric distortion that was contaminating the motion.",
   };
 }
 
-function updateFactorCards(animated = false) {
+function updateFactorCards() {
   try {
     const result = makeFactorsForMode();
     state.lastError = "";
     state.factors = result.factors;
-    elements.factorStrip.innerHTML = result.factors.map((factor) => `
-    <article class="factor-card ${animated ? "" : "visible"}">
-      <div class="factor-tag ${factor.kind.toLowerCase()}">${factor.tag}</div>
-      <h3>${factor.title}</h3>
-      ${buildMatrixMarkup(factor.matrix)}
-      <div class="factor-desc">${factor.desc}</div>
-    </article>
-  `).join("");
-
-    if (animated) {
-      requestAnimationFrame(() => {
-        document.querySelectorAll(".factor-card").forEach((card, index) => {
-          window.setTimeout(() => card.classList.add("visible"), 90 * index);
-        });
-      });
-    }
-
-    elements.geometryCopy.textContent = result.geometry;
   } catch (error) {
     state.lastError = error instanceof Error ? error.message : "Decomposition failed.";
     state.factors = [
       {
-        title: t("invalidInput"),
-        tag: t("statusTag"),
+        title: "Invalid Input",
+        tag: "Status",
         kind: "symmetric",
         matrix: state.matrix,
         desc: state.lastError,
       },
     ];
-    elements.factorStrip.innerHTML = `
-      <article class="factor-card visible">
-        <div class="factor-tag symmetric">${t("statusTag")}</div>
-        <h3>${t("invalidInput")}</h3>
-        ${buildMatrixMarkup(state.matrix)}
-        <div class="factor-desc">${state.lastError}</div>
-      </article>
-    `;
-    elements.geometryCopy.textContent = state.language === "zhTW"
-      ? "這個模式需要更強的矩陣結構。請調整輸入，或重新載入 preset 以恢復合法分解。"
-      : "This mode requires a matrix with stronger structure. Adjust the input or reload the preset to recover a valid factorization.";
   }
 }
 
@@ -888,31 +851,6 @@ function syncMatrixGrid() {
   });
 }
 
-function syncSliders() {
-  const sliders = Array.from(elements.sliderGrid.querySelectorAll("input[type='range']"));
-  sliders.forEach((slider) => {
-    const row = Number(slider.dataset.row);
-    const col = Number(slider.dataset.col);
-    slider.value = String(state.matrix[row][col]);
-    const readout = slider.parentElement.querySelector("span:last-child");
-    readout.textContent = formatNumber(state.matrix[row][col]);
-  });
-}
-
-function syncSliderBounds() {
-  const sliders = Array.from(elements.sliderGrid.querySelectorAll("input[type='range']"));
-  const maxAbs = Math.max(
-    3,
-    ...state.matrix.flat().map((value) => Math.abs(value))
-  );
-  const bound = Math.ceil(maxAbs * 1.15);
-  sliders.forEach((slider) => {
-    slider.min = String(-bound);
-    slider.max = String(bound);
-    slider.step = bound > 20 ? "1" : "0.05";
-  });
-}
-
 function updateStatusCopy() {
   const det = determinant(state.matrix);
   const rank = estimateRank(state.matrix);
@@ -928,10 +866,6 @@ function updateStatusCopy() {
 }
 
 function updateReadouts() {
-  const singularValues = svdDecomposition(state.matrix).singularValues.map(formatNumber).join(", ");
-  elements.numericalCopy.textContent = state.language === "zhTW"
-    ? `這個矩陣的奇異值為 ${singularValues}。它們可以快速反映各主方向上的伸縮強度，也可用來估計 rank 與條件性。`
-    : `The singular values are ${singularValues}. They give a fast read on directional scaling, rank, and numerical conditioning.`;
   elements.factorizationFocusCopy.textContent = state.language === "zhTW"
     ? `目前模式 ${getModeText(state.mode, "label")} 著重的是 ${MODES[state.mode].note[state.language]}`
     : `The active ${getModeText(state.mode, "label")} mode emphasizes this split: ${MODES[state.mode].note[state.language]}`;
@@ -947,7 +881,7 @@ function updateHeroBreakdown() {
   const cards = [buildHeroMatrixCard("A", state.matrix, "symmetric")];
   if (state.factors.length > 0) {
     state.factors.slice(0, 3).forEach((factor) => {
-      cards.push(buildHeroMatrixCard(factor.title, factor.matrix, factor.kind.toLowerCase()));
+      cards.push(buildHeroMatrixCard(`${factor.title} · ${factor.tag}`, factor.matrix, factor.kind.toLowerCase()));
     });
   }
   elements.heroMatrixGrid.innerHTML = cards.join("");
@@ -973,8 +907,6 @@ function setMode(modeKey) {
   state.matrix = cloneMatrix(MODES[modeKey].preset);
   renderModeButtons();
   syncMatrixGrid();
-  syncSliderBounds();
-  syncSliders();
   updateModeCopy();
   updateAll(false);
 }
@@ -995,26 +927,20 @@ function applyStaticTranslations() {
   document.getElementById("matrix-controller-subtitle").textContent = t("matrixControllerSubtitle");
   document.getElementById("fill-preset").textContent = t("loadPreset");
   document.getElementById("decompose").textContent = t("decompose");
-  document.getElementById("animate-split").textContent = t("animateSplit");
   document.getElementById("make-degenerate").textContent = t("makeDegenerate");
   document.getElementById("perturb-rotation").textContent = t("perturbRotation");
-  document.getElementById("randomize").textContent = t("randomize");
-  document.getElementById("slider-mode-title").textContent = t("sliderModeTitle");
+  document.getElementById("randomize").setAttribute("aria-label", t("randomize"));
   document.getElementById("mode-summary-title").textContent = t("modeSummaryTitle");
   document.getElementById("pipeline-status-title").textContent = t("pipelineStatusTitle");
-  document.getElementById("stage-copy").textContent = t("stageCopy");
-  document.getElementById("geometric-readout-title").textContent = t("geometricReadoutTitle");
-  document.getElementById("numerical-readout-title").textContent = t("numericalReadoutTitle");
   document.getElementById("factorization-focus-title").textContent = t("factorizationFocusTitle");
   document.getElementById("knowledge-focus-title").textContent = t("knowledgeFocusTitle");
   document.getElementById("math-title").textContent = t("mathTitle");
   document.getElementById("close-math").textContent = t("close");
   elements.openMathButton.setAttribute("aria-label", t("mathButtonAria"));
-  elements.toggleSlidersButton.textContent = state.slidersEnabled ? t("enabled") : t("hidden");
 }
 
-function updateAll(animated = false) {
-  updateFactorCards(animated);
+function updateAll() {
+  updateFactorCards();
   updateMetrics();
   updateStatusCopy();
   updateReadouts();
@@ -1063,35 +989,7 @@ function buildMatrixInputs() {
     const col = Number(event.target.dataset.col);
     const value = Number(event.target.value);
     state.matrix[row][col] = Number.isFinite(value) ? value : 0;
-    syncSliderBounds();
-    syncSliders();
-    updateAll(false);
-  });
-}
-
-function buildSliders() {
-  elements.sliderGrid.innerHTML = Array.from({ length: 3 }, (_, row) =>
-    Array.from({ length: 3 }, (_, col) => `
-      <label class="slider-row">
-        <span>a${row + 1}${col + 1}</span>
-        <input type="range" min="-3" max="3" step="0.05" data-row="${row}" data-col="${col}" />
-        <span>0.000</span>
-      </label>
-    `).join("")
-  ).join("");
-
-  elements.sliderGrid.addEventListener("input", (event) => {
-    if (!(event.target instanceof HTMLInputElement)) {
-      return;
-    }
-    const row = Number(event.target.dataset.row);
-    const col = Number(event.target.dataset.col);
-    const value = Number(event.target.value);
-    state.matrix[row][col] = value;
-    syncMatrixGrid();
-    syncSliderBounds();
-    syncSliders();
-    updateAll(false);
+    updateAll();
   });
 }
 
@@ -1100,17 +998,13 @@ function randomizeCurrentMatrix() {
     row.map(() => Number((Math.random() * 2.4 - 1.2).toFixed(3)))
   );
   syncMatrixGrid();
-  syncSliderBounds();
-  syncSliders();
-  updateAll(false);
+  updateAll();
 }
 
 function makeDegenerate() {
   state.matrix[2] = state.matrix[1].map((value) => Number((value * 0.5).toFixed(3)));
   syncMatrixGrid();
-  syncSliderBounds();
-  syncSliders();
-  updateAll(true);
+  updateAll();
 }
 
 function perturbRotation() {
@@ -1119,32 +1013,20 @@ function perturbRotation() {
   state.matrix[2][0] -= 0.09;
   state.matrix[1][1] -= 0.07;
   syncMatrixGrid();
-  syncSliderBounds();
-  syncSliders();
-  updateAll(true);
+  updateAll();
 }
 
 function bindUI() {
   elements.fillPresetButton.addEventListener("click", () => {
     state.matrix = cloneMatrix(MODES[state.mode].preset);
     syncMatrixGrid();
-    syncSliderBounds();
-    syncSliders();
-    updateAll(false);
+    updateAll();
   });
 
-  elements.decomposeButton.addEventListener("click", () => updateAll(true));
-  elements.animateSplitButton.addEventListener("click", () => updateFactorCards(true));
+  elements.decomposeButton.addEventListener("click", () => updateAll());
   elements.makeDegenerateButton.addEventListener("click", makeDegenerate);
   elements.perturbRotationButton.addEventListener("click", perturbRotation);
   elements.randomizeButton.addEventListener("click", randomizeCurrentMatrix);
-
-  elements.toggleSlidersButton.addEventListener("click", () => {
-    state.slidersEnabled = !state.slidersEnabled;
-    elements.toggleSlidersButton.classList.toggle("active", state.slidersEnabled);
-    elements.toggleSlidersButton.textContent = state.slidersEnabled ? t("enabled") : t("hidden");
-    elements.sliderGrid.classList.toggle("hidden", !state.slidersEnabled);
-  });
 
   elements.openMathButton.addEventListener("click", () => {
     renderModalContent();
@@ -1161,7 +1043,7 @@ function bindUI() {
     applyStaticTranslations();
     renderModeButtons();
     updateModeCopy();
-    updateAll(false);
+    updateAll();
     renderModalContent();
   });
 
@@ -1175,12 +1057,9 @@ function bindUI() {
 function init() {
   buildModeButtons();
   buildMatrixInputs();
-  buildSliders();
   bindUI();
   applyStaticTranslations();
   syncMatrixGrid();
-  syncSliderBounds();
-  syncSliders();
   updateModeCopy();
   updateAll(true);
 }

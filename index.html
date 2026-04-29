@@ -270,9 +270,7 @@
     .mode-chip,
     .ghost-button,
     .solid-button,
-    .toggle-button,
-    .matrix-action,
-    .icon-button {
+    .matrix-action {
       border: 1px solid var(--line);
       border-radius: 16px;
       color: var(--fog-0);
@@ -284,9 +282,7 @@
     .mode-chip:hover,
     .ghost-button:hover,
     .solid-button:hover,
-    .toggle-button:hover,
-    .matrix-action:hover,
-    .icon-button:hover {
+    .matrix-action:hover {
       transform: translateY(-1px);
       border-color: rgba(136, 192, 208, 0.4);
     }
@@ -332,25 +328,6 @@
       font-size: 0.95rem;
     }
 
-    .slider-grid {
-      display: grid;
-      gap: 10px;
-    }
-
-    .slider-row {
-      display: grid;
-      grid-template-columns: 48px 1fr 52px;
-      gap: 10px;
-      align-items: center;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 0.78rem;
-      color: var(--fog-2);
-    }
-
-    .slider-row input[type="range"] {
-      width: 100%;
-    }
-
     .button-row {
       display: flex;
       flex-wrap: wrap;
@@ -359,9 +336,7 @@
 
     .solid-button,
     .ghost-button,
-    .toggle-button,
-    .matrix-action,
-    .icon-button {
+    .matrix-action {
       padding: 11px 14px;
     }
 
@@ -370,9 +345,18 @@
       border-color: transparent;
     }
 
-    .toggle-button.active {
-      background: rgba(136, 192, 208, 0.18);
-      border-color: rgba(136, 192, 208, 0.4);
+    .dice-row {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .dice-button {
+      width: 46px;
+      height: 46px;
+      padding: 0;
+      border-radius: 14px;
+      font-size: 1.15rem;
     }
 
     .matrix-note,
@@ -408,35 +392,6 @@
       flex-wrap: wrap;
     }
 
-    .stage-copy {
-      color: var(--fog-2);
-      font-size: 0.92rem;
-    }
-
-    .factor-strip {
-      padding: 6px 20px 12px;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      align-items: start;
-    }
-
-    .factor-card {
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 14px;
-      background: rgba(9, 17, 29, 0.48);
-      transform: translateY(18px);
-      opacity: 0;
-      transition: transform 320ms ease, opacity 320ms ease;
-      align-self: start;
-    }
-
-    .factor-card.visible {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
     .factor-tag {
       display: inline-flex;
       padding: 5px 8px;
@@ -467,11 +422,6 @@
       background: rgba(143, 188, 187, 0.14);
     }
 
-    .factor-card h3 {
-      margin: 0 0 12px;
-      font-size: 1.05rem;
-    }
-
     .matrix-view {
       font-family: "JetBrains Mono", monospace;
       font-size: 0.82rem;
@@ -493,25 +443,10 @@
       text-align: center;
     }
 
-    .factor-desc {
-      margin-top: 10px;
-      color: var(--fog-2);
-      line-height: 1.5;
-      font-size: 0.88rem;
-    }
-
-    .insight-grid {
-      padding: 0 20px 16px;
-      display: grid;
-      grid-template-columns: 1.15fr 1fr;
-      gap: 14px;
-    }
-
     .stage-footer {
-      border-top: 1px solid var(--line);
-      padding: 16px 20px 20px;
+      padding: 0 20px 20px;
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 14px;
     }
 
@@ -648,17 +583,17 @@
       right: 24px;
       bottom: 24px;
       z-index: 40;
-      width: 68px;
-      height: 68px;
-      border-radius: 999px;
-      border: 1px solid rgba(136, 192, 208, 0.32);
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(136, 192, 208, 0.24);
       background:
-        radial-gradient(circle at 30% 30%, rgba(235, 203, 139, 0.32), transparent 34%),
-        linear-gradient(145deg, rgba(94, 129, 172, 0.98), rgba(34, 48, 74, 0.98));
+        radial-gradient(circle at 30% 30%, rgba(235, 203, 139, 0.2), transparent 34%),
+        linear-gradient(145deg, rgba(59, 76, 109, 0.96), rgba(23, 33, 51, 0.96));
       box-shadow:
-        0 18px 40px rgba(3, 8, 18, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14);
-      font-size: 1.6rem;
+        0 12px 28px rgba(3, 8, 18, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      font-size: 1.1rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -674,8 +609,8 @@
     .floating-knowledge::before {
       content: "";
       position: absolute;
-      inset: 7px;
-      border-radius: 999px;
+      inset: 6px;
+      border-radius: 12px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       pointer-events: none;
     }
@@ -700,12 +635,12 @@
     }
 
     .floating-knowledge:hover {
-      transform: translateY(-4px) scale(1.03);
-      border-color: rgba(235, 203, 139, 0.42);
+      transform: translateY(-2px);
+      border-color: rgba(136, 192, 208, 0.38);
       box-shadow:
-        0 24px 48px rgba(3, 8, 18, 0.5),
-        0 0 0 8px rgba(136, 192, 208, 0.08);
-      filter: saturate(1.08);
+        0 16px 32px rgba(3, 8, 18, 0.4),
+        0 0 0 6px rgba(136, 192, 208, 0.06);
+      filter: saturate(1.04);
     }
 
     .floating-knowledge:hover::after,
@@ -716,15 +651,11 @@
 
     .floating-knowledge:focus-visible {
       outline: none;
-      transform: translateY(-4px) scale(1.03);
-      border-color: rgba(235, 203, 139, 0.42);
+      transform: translateY(-2px);
+      border-color: rgba(136, 192, 208, 0.38);
       box-shadow:
-        0 24px 48px rgba(3, 8, 18, 0.5),
-        0 0 0 8px rgba(136, 192, 208, 0.08);
-    }
-
-    .hidden {
-      display: none;
+        0 16px 32px rgba(3, 8, 18, 0.4),
+        0 0 0 6px rgba(136, 192, 208, 0.06);
     }
 
     @media (max-width: 1100px) {
@@ -740,8 +671,7 @@
 
       .hero-metrics,
       .hero-breakdown,
-      .factor-strip,
-      .insight-grid {
+      .stage-footer {
         grid-template-columns: 1fr;
       }
     }
@@ -754,10 +684,9 @@
 
       .hero,
       .controls,
-      .insight-grid,
       .stage-footer,
       .toolbar,
-      .factor-strip {
+      .stage-breakdown {
         padding-left: 14px;
         padding-right: 14px;
       }
@@ -770,9 +699,6 @@
         gap: 6px;
       }
 
-      .slider-row {
-        grid-template-columns: 44px 1fr 48px;
-      }
     }
   </style>
 </head>
@@ -827,21 +753,14 @@
           <div class="button-row">
             <button id="fill-preset" class="matrix-action" type="button">Load Preset</button>
             <button id="decompose" class="solid-button" type="button">Decompose</button>
-            <button id="animate-split" class="ghost-button" type="button">Animate Split</button>
           </div>
           <div class="button-row">
             <button id="make-degenerate" class="ghost-button" type="button">Make Degenerate</button>
             <button id="perturb-rotation" class="ghost-button" type="button">Perturb Rotation</button>
-            <button id="randomize" class="ghost-button" type="button">Randomize</button>
           </div>
-        </section>
-
-        <section>
-          <div class="section-title">
-            <h3 id="slider-mode-title">Slider Mode</h3>
-            <button id="toggle-sliders" class="toggle-button active" type="button">Enabled</button>
+          <div class="dice-row">
+            <button id="randomize" class="ghost-button dice-button" type="button" aria-label="Randomize matrix">🎲</button>
           </div>
-          <div id="slider-grid" class="slider-grid"></div>
         </section>
 
         <section>
@@ -861,9 +780,7 @@
 
       <section class="panel stage">
         <div class="toolbar">
-          <div class="toolbar-left">
-            <span id="stage-copy" class="stage-copy"></span>
-          </div>
+          <div class="toolbar-left"></div>
           <div class="toolbar-right"></div>
         </div>
 
@@ -880,19 +797,6 @@
             </div>
           </div>
         </div>
-
-        <div class="insight-grid">
-          <div class="callout">
-            <strong id="geometric-readout-title">Engineering Readout</strong>
-            <p id="geometry-copy"></p>
-          </div>
-          <div class="callout">
-            <strong id="numerical-readout-title">Numerical Readout</strong>
-            <p id="numerical-copy"></p>
-          </div>
-        </div>
-
-        <div id="factor-strip" class="factor-strip"></div>
 
         <div class="stage-footer">
           <div class="callout">
