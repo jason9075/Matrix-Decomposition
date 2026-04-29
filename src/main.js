@@ -829,7 +829,7 @@ function buildMatrixMarkup(matrix) {
   `;
 }
 
-function orthogonalityDiagnostics(matrix) {
+function orthogonalityMaxDeviation(matrix) {
   const gram = multiplyMatrices(transpose(matrix), matrix);
   const identity = identityMatrix();
   let maxAbsDiff = 0;
@@ -839,6 +839,12 @@ function orthogonalityDiagnostics(matrix) {
       maxAbsDiff = Math.max(maxAbsDiff, Math.abs(gram[row][col] - identity[row][col]));
     }
   }
+
+  return maxAbsDiff;
+}
+
+function orthogonalityDiagnostics(matrix) {
+  const maxAbsDiff = orthogonalityMaxDeviation(matrix);
 
   const det = determinant(matrix);
   const looksOrthogonal = maxAbsDiff < 1e-3;
@@ -867,13 +873,18 @@ function buildOrthogonalityHover(matrix) {
   `;
 }
 
+function shouldInspectOrthogonality(title, kind) {
+  return kind === "orthogonal" || (state.mode === "polar" && title === "A");
+}
+
 function buildHeroMatrixCard(title, tag, matrix, kind = "symmetric") {
+  const inspectOrthogonality = shouldInspectOrthogonality(title, kind);
   const orthogonalityHover = kind === "orthogonal" ? buildOrthogonalityHover(matrix) : "";
-  const tagLabel = kind === "orthogonal" ? `${tag} 🔍` : tag;
+  const tagLabel = inspectOrthogonality ? `${tag} 🔍` : tag;
   return `
-    <article class="hero-matrix-card ${kind === "orthogonal" ? "has-orthogonality-hover" : ""}">
-      <div class="factor-tag ${kind}">${tagLabel}</div>
-      ${orthogonalityHover}
+    <article class="hero-matrix-card ${inspectOrthogonality ? "has-orthogonality-hover" : ""}">
+      <div class="factor-tag ${kind} ${inspectOrthogonality ? "inspect-orthogonality" : ""}">${tagLabel}</div>
+      ${inspectOrthogonality ? buildOrthogonalityHover(matrix) : orthogonalityHover}
       <h3>${title}</h3>
       ${buildMatrixMarkup(matrix)}
     </article>
@@ -1142,10 +1153,39 @@ function makeDegenerate() {
 }
 
 function perturbRotation() {
-  state.matrix = cloneMatrix(MODES.polar.preset);
-  state.matrix[0][2] += 0.12;
-  state.matrix[2][0] -= 0.09;
-  state.matrix[1][1] -= 0.07;
+  const current = cloneMatrix(state.matrix);
+  const baselineError = orthogonalityMaxDeviation(current);
+  const perturbations = [
+    [
+      [1, 0.14, 0.03],
+      [0, 1, -0.09],
+      [0.05, 0, 1],
+    ],
+    [
+      [1, -0.12, 0],
+      [0.08, 1, 0.06],
+      [0, -0.07, 1],
+    ],
+    [
+      [1, 0.18, -0.04],
+      [0, 1, 0.11],
+      [-0.06, 0, 1],
+    ],
+  ];
+
+  let chosen = current;
+  let bestError = baselineError;
+
+  perturbations.forEach((delta) => {
+    const candidate = multiplyMatrices(current, delta);
+    const candidateError = orthogonalityMaxDeviation(candidate);
+    if (candidateError > bestError) {
+      chosen = candidate;
+      bestError = candidateError;
+    }
+  });
+
+  state.matrix = roundMatrix(chosen);
   syncMatrixGrid();
   updateAll();
 }
