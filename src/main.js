@@ -38,8 +38,8 @@ const MODES = {
     label: { en: "RQ", zhTW: "RQ" },
     short: { en: "camera intrinsics times rotation", zhTW: "相機內參乘上旋轉" },
     note: {
-      en: "Camera disassembly: the left upper-triangular factor is read like the intrinsic matrix K, while the right orthogonal factor is the rotation matrix. Keep that separate from the decomposition symbols R and Q.",
-      zhTW: "相機拆解：左邊的上三角因子通常讀成內參矩陣 K，右邊的正交因子就是旋轉矩陣。這和分解符號本身的 R、Q 要分開看，不要混在一起。",
+      en: "The RQ decomposition on this page is derived from QR (refer to Knowledge). In camera calibration, the left upper-triangular factor represents the intrinsic matrix K, while the right orthogonal factor is the rotation matrix. Be sure to distinguish the symbols R and Q used in the derivation from those representing the camera's pose to avoid confusion.",
+      zhTW: "這個頁面裡的 RQ 是從 QR 推導出來的，可參考Knowledge。相機拆解：左邊的上三角因子通常讀成內參矩陣 K，右邊的正交因子就是旋轉矩陣R，所以要把兩者符號的 R、Q 分開看，避免搞混了R。",
     },
     matrixNote: {
       en: "The preset looks like a realistic calibration-style matrix: pixel-scale intrinsics multiplied by a mild camera rotation. Randomize keeps focal lengths and principal point in plausible ranges.",
@@ -71,8 +71,8 @@ const MODES = {
     label: { en: "QR", zhTW: "QR" },
     short: { en: "orthogonal times upper triangular", zhTW: "正交乘以上三角" },
     note: {
-      en: "Orthogonalization and least-squares: the left factor is an orthonormal basis and the right factor carries coefficients in that basis.",
-      zhTW: "正交化與最小平方法：左側因子是正交基底，右側因子是在該基底下的係數。",
+      en: "Orthogonalization and least-squares: the left factor is an orthonormal basis and the right factor carries coefficients in that basis. A simple way to read it is as a Gram-Schmidt style cleanup of the input columns.",
+      zhTW: "正交化與最小平方法：左側因子是正交基底，右側因子是在該基底下的係數。你也可以把它先粗略理解成對輸入 column 做一次 Gram-Schmidt 風格的整理。",
     },
     matrixNote: {
       en: "The preset comes from an orthonormal basis multiplied by a moderate upper-triangular coefficient matrix. Randomize preserves that least-squares friendly scale.",
@@ -254,7 +254,7 @@ const modalLessons = {
     rq: {
       intro: "RQ is the camera-centric decomposition here. It is useful when the matrix already behaves like a calibration block, and you want to separate intrinsic parameters from orientation instead of treating everything as one opaque 3x3 map.",
       mathTitle: "Mathematical Form",
-      mathBody: "We write $$A = RQ,$$ where $R$ is upper triangular and $Q$ is orthogonal. In camera language, the left factor is usually interpreted as the intrinsic matrix $K$, while the right factor is the rotation matrix. That naming collision is exactly why this page keeps the decomposition symbols $R, Q$ separate from camera-model symbols $K, R$. The key structural goal is not just factorization, but enforcing the upper-triangular shape on the left factor.",
+      mathBody: "We write $$A = RQ,$$ where $R$ is upper triangular and $Q$ is orthogonal. In camera language, the left factor is usually interpreted as the intrinsic matrix $K$, while the right factor is the rotation matrix. In this page, RQ is obtained from QR by transforming the matrix into a flipped system. Let $$J = \\begin{bmatrix}0 & 0 & 1 \\\\ 0 & 1 & 0 \\\\ 1 & 0 & 0\\end{bmatrix}$$ be the permutation matrix that reverses column order. One convenient route is to form $$B = (J A J)^{\\top}.$$ If $$B = Q_{QR} R_{QR}$$ is a QR factorization, then flipping back gives $$A = \\underbrace{J R_{QR}^{\\top} J}_{R}\\;\\underbrace{J Q_{QR}^{\\top} J}_{Q}.$$ That is the bridge from QR to RQ used conceptually here.",
       derivationTitle: "Derivation Used Here",
       derivationBody: "This page treats RQ as something derived from QR rather than as the first algorithm to learn. The matrix is flipped in rows and columns, transposed, sent through QR, and then flipped back to recover an upper-triangular left factor and an orthogonal right factor. In other words, the trick is to transform the problem into one QR already knows how to solve, then undo that transformation. A final sign cleanup keeps the diagonal of the upper-triangular factor positive.",
       jsTitle: "JavaScript Path",
@@ -316,7 +316,7 @@ const modalLessons = {
     rq: {
       intro: "RQ 是這個頁面裡最偏相機語境的分解。當一個矩陣本來就比較像 calibration block 時，你真正想拆開看的通常不是它本身，而是裡面的內參和姿態。",
       mathTitle: "數學形式",
-      mathBody: "我們把矩陣寫成 $$A = RQ,$$ 其中 $R$ 是上三角矩陣，$Q$ 是正交矩陣。若放到相機拆解的語境裡，左邊這個分解因子通常會被解讀成內參矩陣 $K$，右邊就是旋轉矩陣。也就是說，RQ 分解裡的 $R$ 不要直接和相機姿態裡的旋轉 $R$ 混為一談；這也是這個頁面刻意把分解符號 $R, Q$ 和相機符號 $K, R$ 分開講的原因。這裡的目標不只是做分解，而是要求左邊那個因子真的保留上三角結構。",
+      mathBody: "我們把矩陣寫成 $$A = RQ,$$ 其中 $R$ 是上三角矩陣，$Q$ 是正交矩陣。若放到相機拆解的語境裡，左邊這個分解因子通常會被解讀成內參矩陣 $K$，右邊就是旋轉矩陣。這個頁面裡的 RQ 不是另外獨立硬推，而是從 QR 轉過來：令 $$J = \\begin{bmatrix}0 & 0 & 1 \\\\ 0 & 1 & 0 \\\\ 1 & 0 & 0\\end{bmatrix}$$ 為把 column 順序反過來的 permutation matrix，先建立 $$B = (J A J)^{\\top}.$$ 若對它做 QR 分解得到 $$B = Q_{QR} R_{QR},$$ 那麼再翻回去就會得到 $$A = \\underbrace{J R_{QR}^{\\top} J}_{R}\\;\\underbrace{J Q_{QR}^{\\top} J}_{Q}.$$ 也就是說，這裡的 RQ 本質上是透過 QR 的結果重組出來的。",
       derivationTitle: "這頁實際用的推導",
       derivationBody: "這個頁面把 RQ 視為從 QR 推出來的結果，而不是主要演算法本體。做法是先把矩陣做列翻轉、行翻轉和轉置，轉成一個 QR 比較容易處理的形式；跑完 QR 之後，再把結果全部翻回來，就能得到左邊是上三角、右邊是正交的 RQ 分解。也就是說，這裡的重點不是另外再學一套 RQ 消去，而是理解它如何從 QR 轉換過來。最後還會修正對角線符號，讓上三角因子的對角項維持為正。",
       jsTitle: "對應的 JavaScript",
